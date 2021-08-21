@@ -27,6 +27,12 @@ import java.util.logging.SimpleFormatter;
 
 import javax.swing.event.EventListenerList;
 
+import com.azure.core.implementation.http.HttpClientProviders;
+import com.microsoft.azure.toolkit.lib.Azure;
+import com.microsoft.azure.toolkit.lib.auth.AzureAccount;
+import com.microsoft.azure.toolkit.lib.common.messager.AzureMessager;
+import com.microsoft.azure.toolkit.lib.common.task.AzureRxTaskManager;
+import com.microsoft.azuretools.core.utils.EclipseAzureMessager;
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -64,6 +70,7 @@ import com.microsoft.azuretools.utils.TelemetryUtils;
 import com.microsoft.tooling.msservices.components.DefaultLoader;
 import com.microsoft.tooling.msservices.components.PluginComponent;
 import com.microsoft.tooling.msservices.components.PluginSettings;
+import reactor.core.publisher.Hooks;
 
 /**
  * The activator class controls the plug-in life cycle
@@ -110,7 +117,7 @@ public class Activator extends AbstractUIPlugin implements PluginComponent {
      */
     @Override
     public void start(BundleContext context) throws Exception {
-        super.start(context);
+        super. start(context);
         plugin = this;
         pluginInstLoc = Paths.get(PluginUtil.pluginFolder, File.separator,
                 com.microsoft.azuretools.core.utils.Messages.commonPluginID).toString();
@@ -129,6 +136,10 @@ public class Activator extends AbstractUIPlugin implements PluginComponent {
             showException("Azure Core Plugin", "An error occurred while attempting to load settings for the Azure Core plugin.", e);
         }
         findObsoletePackages(context);
+        
+     
+        //Azure.az(AzureAccount.class);
+
         super.start(context);
     }
 
