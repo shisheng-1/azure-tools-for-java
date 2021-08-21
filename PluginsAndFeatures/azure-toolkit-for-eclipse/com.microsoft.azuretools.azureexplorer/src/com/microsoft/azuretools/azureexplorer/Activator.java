@@ -28,12 +28,20 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
+import com.azure.core.implementation.http.HttpClientProviders;
 import com.microsoft.azure.hdinsight.common.HDInsightLoader;
+import com.microsoft.azure.toolkit.lib.common.messager.AzureMessager;
+import com.microsoft.azure.toolkit.lib.common.task.AzureRxTaskManager;
+import com.microsoft.azure.toolkit.lib.common.task.AzureTaskManager;
 import com.microsoft.azuretools.azureexplorer.helpers.UIHelperImpl;
 import com.microsoft.azuretools.core.mvp.ui.base.AppSchedulerProvider;
 import com.microsoft.azuretools.core.mvp.ui.base.SchedulerProviderFactory;
+import com.microsoft.azuretools.core.utils.EclipseAzureMessager;
+import com.microsoft.azuretools.core.utils.EclipseAzureTaskManager;
 import com.microsoft.tooling.msservices.components.DefaultLoader;
 import com.microsoft.tooling.msservices.serviceexplorer.Node;
+
+import reactor.core.publisher.Hooks;
 
 /**
  * The activator class controls the plug-in life cycle
@@ -66,6 +74,14 @@ public class Activator extends AbstractUIPlugin {
         plugin = this;
         DefaultLoader.setUiHelper(new UIHelperImpl());
         com.microsoft.azuretools.azureexplorer.helpers.HDInsightHelperImpl.initHDInsightLoader();
+        
+        
+        HttpClientProviders.createInstance();
+        AzureMessager.setDefaultMessager(new EclipseAzureMessager());
+                
+        Hooks.onErrorDropped(ex -> AzureMessager.getMessager().error(ex));
+        AzureRxTaskManager.register();
+        AzureTaskManager.register(new EclipseAzureTaskManager());
 
         Node.setNode2Actions(NodeActionsMap.node2Actions);
 //        ServiceExplorerView serviceExplorerView = (ServiceExplorerView) PlatformUI
