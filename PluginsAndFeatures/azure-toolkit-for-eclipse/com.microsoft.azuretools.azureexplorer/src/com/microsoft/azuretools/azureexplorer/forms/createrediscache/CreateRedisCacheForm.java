@@ -85,8 +85,6 @@ import com.microsoft.azuretools.azureexplorer.messages.MessageHandler;
 import com.microsoft.azuretools.core.Activator;
 import com.microsoft.azuretools.core.components.AzureTitleAreaDialogWrapper;
 import com.microsoft.azuretools.sdkmanage.AzureManager;
-import com.microsoft.azuretools.utils.AzureModel;
-import com.microsoft.azuretools.utils.AzureModelController;
 import com.microsoft.tooling.msservices.components.DefaultLoader;
 
 public class CreateRedisCacheForm extends AzureTitleAreaDialogWrapper {
@@ -96,7 +94,7 @@ public class CreateRedisCacheForm extends AzureTitleAreaDialogWrapper {
     private List<SubscriptionDetail> selectedSubscriptions;
     private List<Location> sortedLocations;
     private List<String> sortedGroups;
-    private SubscriptionDetail currentSub;
+    private Subscription currentSub;
     private boolean noSSLPort = false;
     private boolean newResGrp = true;
     private boolean loaded = false;
@@ -398,7 +396,6 @@ public class CreateRedisCacheForm extends AzureTitleAreaDialogWrapper {
                     @Override
                     public void run() {
                         try {
-                            AzureModelController.updateSubscriptionMaps(null);
                             DefaultLoader.getIdeHelper().invokeLater(new Runnable() {
                                 @Override
                                 public void run() {

@@ -23,10 +23,10 @@ public class UIFactory implements IUIFactory {
        return new Notification();
     }
 
-    @Override
-    public IWebUi getWebUi() {
-        return new LoginWindow();
-    }
+//    @Override
+//    public IWebUi getWebUi() {
+//        return new LoginWindow();
+//    }
 
     @Override
     public IProgressTaskImpl getProgressTaskImpl() {
