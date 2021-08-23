@@ -5,6 +5,8 @@
 
 package com.microsoft.azure.toolkit.intellij.function.runner.deploy;
 
+import com.azure.core.management.exception.ManagementException;
+import com.azure.resourcemanager.AzureResourceManager;
 import com.intellij.execution.process.ProcessOutputType;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiMethod;
@@ -56,7 +58,8 @@ import java.util.stream.Collectors;
 import static com.microsoft.intellij.ui.messages.AzureBundle.message;
 
 public class FunctionDeploymentState extends AzureRunProfileState<IFunctionApp> {
-
+    private static final int SYNC_FUNCTION_MAX_ATTEMPTS = 5;
+    private static final int SYNC_FUNCTION_DELAY = 1;
     private static final int LIST_TRIGGERS_MAX_RETRY = 5;
     private static final int LIST_TRIGGERS_RETRY_PERIOD_IN_SECONDS = 10;
     private static final String AUTH_LEVEL = "authLevel";
@@ -66,8 +69,8 @@ public class FunctionDeploymentState extends AzureRunProfileState<IFunctionApp> 
     private static final String UNABLE_TO_LIST_NONE_ANONYMOUS_HTTP_TRIGGERS = "Some http trigger urls cannot be displayed " +
             "because they are non-anonymous. To access the non-anonymous triggers, please refer https://aka.ms/azure-functions-key.";
     private static final String FAILED_TO_LIST_TRIGGERS = "Deployment succeeded, but failed to list http trigger urls.";
-    private static final String SYNCING_TRIGGERS = "Syncing triggers and fetching function information";
-    private static final String SYNCING_TRIGGERS_WITH_RETRY = "Syncing triggers and fetching function information (Attempt {0}/{1})...";
+    private static final String LIST_TRIGGERS = "Syncing triggers and fetching function information";
+    private static final String LIST_TRIGGERS_WITH_RETRY = "Syncing triggers and fetching function information (Attempt {0}/{1})...";
     private static final String NO_TRIGGERS_FOUNDED = "No triggers found in deployed function app";
 
     private final FunctionDeployConfiguration functionDeployConfiguration;
@@ -208,6 +211,7 @@ public class FunctionDeploymentState extends AzureRunProfileState<IFunctionApp> 
 
     private void listHTTPTriggerUrls(IFunctionApp target) {
         try {
+            syncTriggers(target);
             final List<FunctionEntity> triggers = listFunctions(target);
             final List<FunctionEntity> httpFunction = triggers.stream()
                     .filter(function -> function.getTrigger() != null &&
@@ -226,10 +230,27 @@ public class FunctionDeploymentState extends AzureRunProfileState<IFunctionApp> 
             if (anonymousTriggers.size() < httpFunction.size()) {
                 AzureMessager.getMessager().info(UNABLE_TO_LIST_NONE_ANONYMOUS_HTTP_TRIGGERS);
             }
-        } catch (final RuntimeException e) {
+        } catch (final RuntimeException | InterruptedException e) {
             // show warning instead of exception for list triggers
             AzureMessager.getMessager().warning(FAILED_TO_LIST_TRIGGERS);
         }
+    }
+
+    // todo: move to app service library
+    // Refers https://github.com/Azure/azure-functions-core-tools/blob/3.0.3568/src/Azure.Functions.Cli/Actions/AzureActions/PublishFunctionAppAction.cs#L452
+    private void syncTriggers(final IFunctionApp functionApp) throws InterruptedException {
+        Thread.sleep(5 * 1000);
+        Mono.fromRunnable(() -> {
+            try {
+                Azure.az(AzureAppService.class).getAzureResourceManager(functionApp.subscriptionId())
+                        .functionApps().manager().serviceClient().getWebApps().syncFunctions(functionApp.resourceGroup(), functionApp.name());
+            } catch (ManagementException e) {
+                if (e.getResponse().getStatusCode() == 200) {
+                    // Java SDK throw exception with 200 response, swallow exception in this case
+                }
+            }
+        }).subscribeOn(Schedulers.boundedElastic())
+                .retryWhen(Retry.fixedDelay(SYNC_FUNCTION_MAX_ATTEMPTS - 1, Duration.ofSeconds(SYNC_FUNCTION_DELAY))).block();
     }
 
     // todo: Move to toolkit lib as shared task
@@ -238,7 +259,7 @@ public class FunctionDeploymentState extends AzureRunProfileState<IFunctionApp> 
         final IAzureMessager azureMessager = AzureMessager.getMessager();
         return Mono.fromCallable(() -> {
             final AzureString message = count[0]++ == 0 ?
-                    AzureString.fromString(SYNCING_TRIGGERS) : AzureString.format(SYNCING_TRIGGERS_WITH_RETRY, count[0], LIST_TRIGGERS_MAX_RETRY);
+                    AzureString.fromString(LIST_TRIGGERS) : AzureString.format(LIST_TRIGGERS_WITH_RETRY, count[0], LIST_TRIGGERS_MAX_RETRY);
             azureMessager.info(message);
             return Optional.ofNullable(functionApp.listFunctions(true))
                     .filter(CollectionUtils::isNotEmpty)
