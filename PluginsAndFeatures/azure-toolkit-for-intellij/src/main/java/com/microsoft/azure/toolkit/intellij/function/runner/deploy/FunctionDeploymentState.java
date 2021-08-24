@@ -6,7 +6,6 @@
 package com.microsoft.azure.toolkit.intellij.function.runner.deploy;
 
 import com.azure.core.management.exception.ManagementException;
-import com.azure.resourcemanager.AzureResourceManager;
 import com.intellij.execution.process.ProcessOutputType;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiMethod;
