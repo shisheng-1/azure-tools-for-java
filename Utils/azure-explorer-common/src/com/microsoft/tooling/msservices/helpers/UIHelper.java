@@ -55,21 +55,7 @@ public interface UIHelper {
 
     File showFileSaver(String title, String fileName);
 
-    <T extends StorageServiceTreeItem> void openItem(
-            Object projectObject, final StorageAccount storageAccount,
-            final T item, String itemType, String itemName, String iconName);
-
-    <T extends StorageServiceTreeItem> void openItem(
-            Object projectObject, final ClientStorageAccount clientStorageAccount,
-            final T item, String itemType, String itemName, String iconName);
-
     void openItem(@NotNull Object projectObject, @NotNull Object itemVirtualFile);
-
-    void refreshQueue(@NotNull Object projectObject, @NotNull StorageAccount storageAccount, @NotNull Queue queue);
-
-    void refreshBlobs(@NotNull Object projectObject, @NotNull String accountName, @NotNull BlobContainer container);
-
-    void refreshTable(@NotNull Object projectObject, @NotNull StorageAccount storageAccount, @NotNull Table table);
 
     String promptForOpenSSLPath();
 

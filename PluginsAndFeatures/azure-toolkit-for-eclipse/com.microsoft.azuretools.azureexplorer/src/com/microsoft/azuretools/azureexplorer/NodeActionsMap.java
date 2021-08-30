@@ -25,7 +25,6 @@ package com.microsoft.azuretools.azureexplorer;
 import com.google.common.collect.ImmutableList;
 import com.microsoft.azure.hdinsight.serverexplore.HDInsightRootModuleImpl;
 import com.microsoft.azuretools.azureexplorer.actions.AddNewClusterAction;
-import com.microsoft.azuretools.azureexplorer.actions.AttachExternalStorageAccountAction;
 import com.microsoft.azuretools.azureexplorer.actions.CreateArmStorageAccountAction;
 import com.microsoft.azuretools.azureexplorer.actions.CreateArmVMAction;
 import com.microsoft.azuretools.azureexplorer.actions.CreateRedisCacheAction;
@@ -44,10 +43,9 @@ public class NodeActionsMap {
             new HashMap<Class<? extends Node>, ImmutableList<Class<? extends NodeActionListener>>>();
 
     static {
+    	node2Actions.put(StorageModule.class, new ImmutableList.Builder().add(CreateArmStorageAccountAction.class).build());
         node2Actions.put(VMArmModule.class, new ImmutableList.Builder().add(CreateArmVMAction.class).build());
         node2Actions.put(RedisCacheModule.class, new ImmutableList.Builder().add(CreateRedisCacheAction.class).build());
-        node2Actions.put(StorageModule.class, new ImmutableList.Builder().add(CreateArmStorageAccountAction.class,
-            AttachExternalStorageAccountAction.class).build());
         node2Actions.put(HDInsightRootModuleImpl.class, new ImmutableList.Builder().add(AddNewClusterAction.class).build());
     }
 }

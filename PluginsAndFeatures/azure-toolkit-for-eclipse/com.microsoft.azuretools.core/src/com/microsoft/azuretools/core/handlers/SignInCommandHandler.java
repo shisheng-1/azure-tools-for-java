@@ -37,11 +37,17 @@ public class SignInCommandHandler extends AzureAbstractHandler {
                 authMethodManager.setAuthMethodDetails(authMethodDetailsUpdated);
                 SelectSubsriptionsCommandHandler.onSelectSubscriptions(shell);
                 authMethodManager.notifySignInEventListener();
+                persistAuthMethodDetails();
             }
             return authMethodManager.isSignedIn();
         } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
+    }
+    
+    private static void persistAuthMethodDetails() {
+        AuthMethodManager.getInstance().persistAuthMethodDetails();
+        AuthMethodManager.getInstance().notifySignInEventListener();
     }
 }

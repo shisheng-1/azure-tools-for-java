@@ -22,18 +22,44 @@
 
 package com.microsoft.azuretools.azureexplorer;
 
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
+import org.reflections.Reflections;
+import org.reflections.scanners.ResourcesScanner;
+import org.reflections.scanners.SubTypesScanner;
+import org.reflections.util.ClasspathHelper;
+import org.reflections.util.ConfigurationBuilder;
+import org.reflections.util.FilterBuilder;
 
-import com.microsoft.azure.hdinsight.common.HDInsightLoader;
+import com.azure.core.http.policy.HttpLogDetailLevel;
+import com.azure.core.implementation.http.HttpClientProviders;
+import com.azure.core.management.AzureEnvironment;
+import com.azure.core.management.profile.AzureProfile;
+import com.azure.resourcemanager.AzureResourceManager;
+import com.microsoft.azure.toolkit.lib.Azure;
+import com.microsoft.azure.toolkit.lib.auth.AzureAccount;
+import com.microsoft.azure.toolkit.lib.auth.model.AuthType;
+import com.microsoft.azure.toolkit.lib.common.messager.AzureMessager;
+import com.microsoft.azure.toolkit.lib.common.task.AzureRxTaskManager;
+import com.microsoft.azure.toolkit.lib.common.task.AzureTaskManager;
 import com.microsoft.azuretools.azureexplorer.helpers.UIHelperImpl;
-import com.microsoft.azuretools.core.mvp.ui.base.AppSchedulerProvider;
-import com.microsoft.azuretools.core.mvp.ui.base.SchedulerProviderFactory;
+import com.microsoft.azuretools.core.utils.EclipseAzureMessager;
+import com.microsoft.azuretools.core.utils.EclipseAzureTaskManager;
 import com.microsoft.tooling.msservices.components.DefaultLoader;
 import com.microsoft.tooling.msservices.serviceexplorer.Node;
+
+import reactor.core.publisher.Hooks;
+
 
 /**
  * The activator class controls the plug-in life cycle
@@ -64,8 +90,30 @@ public class Activator extends AbstractUIPlugin {
     public void start(BundleContext context) throws Exception {
         super.start(context);
         plugin = this;
+
         DefaultLoader.setUiHelper(new UIHelperImpl());
         com.microsoft.azuretools.azureexplorer.helpers.HDInsightHelperImpl.initHDInsightLoader();
+        
+        
+        HttpClientProviders.createInstance();
+        AzureMessager.setDefaultMessager(new EclipseAzureMessager());
+                
+        Hooks.onErrorDropped(ex -> AzureMessager.getMessager().error(ex));
+        AzureRxTaskManager.register();
+        AzureTaskManager.register(new EclipseAzureTaskManager());
+
+//         new Thread(()-> {
+//         	az.login(AuthType.AZURE_CLI);
+//             az.account().selectSubscription(Arrays.asList(sid));
+//             AzureProfile profile = new AzureProfile(AzureEnvironment.AZURE);
+//             AzureResourceManager azure = AzureResourceManager
+//                     .configure()
+//                     .withLogLevel(HttpLogDetailLevel.NONE)
+//                     .authenticate(Azure.az(AzureAccount.class).account().getTokenCredential(sid), profile)
+//                     .withSubscription(sid);
+//             azure.resourceGroups().list().stream().collect(Collectors.toList());
+//         }).start();
+        
 
         Node.setNode2Actions(NodeActionsMap.node2Actions);
 //        ServiceExplorerView serviceExplorerView = (ServiceExplorerView) PlatformUI

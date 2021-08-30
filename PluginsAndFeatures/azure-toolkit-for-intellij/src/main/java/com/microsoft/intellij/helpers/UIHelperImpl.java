@@ -77,8 +77,10 @@ import com.microsoft.tooling.msservices.serviceexplorer.azure.webapp.WebAppNode;
 import com.microsoft.tooling.msservices.serviceexplorer.azure.webapp.deploymentslot.DeploymentSlotNode;
 import org.apache.commons.lang.ArrayUtils;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
+import java.awt.Component;
+import java.awt.Desktop;
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -200,37 +202,6 @@ public class UIHelperImpl implements UIHelper {
     }
 
     @Override
-    public <T extends StorageServiceTreeItem> void openItem(@NotNull Object projectObject,
-                                                            @Nullable StorageAccount storageAccount,
-                                                            @NotNull T item,
-                                                            @Nullable String itemType,
-                                                            @NotNull final String itemName,
-                                                            @Nullable final String iconName) {
-        LightVirtualFile itemVirtualFile = new LightVirtualFile(item.getName() + itemType);
-        itemVirtualFile.putUserData((Key<T>) name2Key.get(item.getClass()), item);
-        itemVirtualFile.putUserData(STORAGE_KEY, storageAccount);
-
-        itemVirtualFile.setFileType(new AzureFileType(itemName, UIHelperImpl.loadIcon(iconName)));
-
-        openItem(projectObject, itemVirtualFile);
-    }
-
-    @Override
-    public <T extends StorageServiceTreeItem> void openItem(Object projectObject,
-                                                            ClientStorageAccount clientStorageAccount,
-                                                            T item, String itemType,
-                                                            String itemName,
-                                                            String iconName) {
-        LightVirtualFile itemVirtualFile = new LightVirtualFile(item.getName() + itemType);
-        itemVirtualFile.putUserData((Key<T>) name2Key.get(item.getClass()), item);
-        itemVirtualFile.putUserData(CLIENT_STORAGE_KEY, clientStorageAccount);
-
-        itemVirtualFile.setFileType(new AzureFileType(itemName, UIHelperImpl.loadIcon(iconName)));
-
-        openItem(projectObject, itemVirtualFile);
-    }
-
-    @Override
     public void openItem(@NotNull final Object projectObject, @NotNull final Object itemVirtualFile) {
         AzureTaskManager
             .getInstance()
@@ -285,43 +256,6 @@ public class UIHelperImpl implements UIHelper {
         public String getCharset(@NotNull VirtualFile virtualFile, @NotNull byte[] bytes) {
             return StandardCharsets.UTF_8.name();
         }
-    }
-
-    @Override
-    public void refreshQueue(@NotNull final Object projectObject, @NotNull final StorageAccount storageAccount,
-                             @NotNull final Queue queue) {
-        AzureTaskManager.getInstance().read(() -> {
-            VirtualFile file = (VirtualFile) getOpenedFile(projectObject, storageAccount.name(), queue);
-            if (file != null) {
-                final QueueFileEditor queueFileEditor = (QueueFileEditor) FileEditorManager.getInstance((Project) projectObject).getEditors(file)[0];
-                AzureTaskManager.getInstance().runLater(() -> queueFileEditor.fillGrid());
-            }
-        });
-    }
-
-    @Override
-    public void refreshBlobs(@NotNull final Object projectObject, @NotNull final String accountName, @NotNull final BlobContainer container) {
-        AzureTaskManager.getInstance().read(() -> {
-            VirtualFile file = (VirtualFile) getOpenedFile(projectObject, accountName, container);
-            if (file != null) {
-                final BlobExplorerFileEditor containerFileEditor =
-                    (BlobExplorerFileEditor) FileEditorManager.getInstance((Project) projectObject)
-                                                              .getEditors(file)[0];
-                AzureTaskManager.getInstance().runLater(() -> containerFileEditor.fillGrid());
-            }
-        });
-    }
-
-    @Override
-    public void refreshTable(@NotNull final Object projectObject, @NotNull final StorageAccount storageAccount,
-                             @NotNull final Table table) {
-        AzureTaskManager.getInstance().read(() -> {
-            final VirtualFile file = (VirtualFile) getOpenedFile(projectObject, storageAccount.name(), table);
-            if (file != null) {
-                final TableFileEditor tableFileEditor = (TableFileEditor) FileEditorManager.getInstance((Project) projectObject).getEditors(file)[0];
-                AzureTaskManager.getInstance().runLater(tableFileEditor::fillGrid);
-            }
-        });
     }
 
     @NotNull

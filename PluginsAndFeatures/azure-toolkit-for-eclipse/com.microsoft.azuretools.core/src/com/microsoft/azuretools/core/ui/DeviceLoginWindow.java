@@ -6,34 +6,29 @@
 package com.microsoft.azuretools.core.ui;
 
 import com.azure.identity.DeviceCodeInfo;
-import com.microsoft.aad.adal4j.AdalErrorCode;
-import com.microsoft.aad.adal4j.AuthenticationCallback;
-import com.microsoft.aad.adal4j.AuthenticationContext;
-import com.microsoft.aad.adal4j.AuthenticationException;
-import com.microsoft.aad.adal4j.AuthenticationResult;
-import com.microsoft.aad.adal4j.DeviceCode;
+import com.google.gson.JsonSyntaxException;
 import com.microsoft.azuretools.adauth.IDeviceLoginUI;
 import com.microsoft.azuretools.core.Activator;
 import com.microsoft.azuretools.core.components.AzureDialogWrapper;
+import com.microsoft.azuretools.utils.JsonUtils;
 import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.ILog;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.fieldassist.ControlDecoration;
+import org.eclipse.jface.fieldassist.FieldDecoration;
+import org.eclipse.jface.fieldassist.FieldDecorationRegistry;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.layout.FillLayout;
-import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.Label;
-import org.eclipse.swt.widgets.Link;
-import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.layout.*;
+import org.eclipse.swt.widgets.*;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 
@@ -42,9 +37,12 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class DeviceLoginWindow implements IDeviceLoginUI {
 
@@ -74,7 +72,7 @@ public class DeviceLoginWindow implements IDeviceLoginUI {
     }
 
     public void closePrompt() {
-        if (dialog != null) {
+        if (dialog != null && dialog.getShell() != null) {
             Display.getDefault().syncExec(() -> dialog.close());
         }
     }
@@ -89,10 +87,8 @@ public class DeviceLoginWindow implements IDeviceLoginUI {
     private class DeviceLoginDialog extends AzureDialogWrapper {
 
         private final DeviceCodeInfo deviceCode;
-        private AuthenticationResult authenticationResult = null;
         private Browser browser;
         private Link link;
-        private final ExecutorService es = Executors.newSingleThreadExecutor();
 
         public DeviceLoginDialog(Shell parentShell, DeviceCodeInfo deviceCode
         ) {
@@ -170,36 +166,12 @@ public class DeviceLoginWindow implements IDeviceLoginUI {
             okButton.setText("Copy&&Open");
         }
 
-        private void pullAuthenticationResult(final AuthenticationContext ctx, final DeviceCode deviceCode,
-                                              final AuthenticationCallback<AuthenticationResult> callback) {
-            long remaining = deviceCode.getExpiresIn();
-            long interval = Math.min(3, deviceCode.getInterval());
-            long expiredTime = System.currentTimeMillis() + remaining * 1000;
-            int maxTries = 3;
-            int checkTime = 0;
-            while (System.currentTimeMillis() < expiredTime && checkTime < maxTries && authenticationResult == null) {
-                try {
-                    Thread.sleep(1000 * interval);
-                    authenticationResult = ctx.acquireTokenByDeviceCode(deviceCode, callback).get();
-                } catch (Exception e) {
-                    if (e.getCause() instanceof AuthenticationException &&
-                        ((AuthenticationException) e.getCause()).getErrorCode()
-                            == AdalErrorCode.AUTHORIZATION_PENDING) {
-                        // reset the retryCount to zero, will quit only for 3 consecutive fail
-                        checkTime = 0;
-                    } else {
-                        checkTime++;
-                        LOG.log(new Status(IStatus.ERROR, Activator.PLUGIN_ID, "DeviceLoginWindow", e));
-                    }
-                }
-            }
-            Display.getDefault().syncExec(() -> super.close());
-        }
-
         private String createHtmlFormatMessage(Composite composite) {
             final String verificationUrl = deviceCode.getVerificationUrl();
             return deviceCode.getMessage()
                 .replace(verificationUrl, String.format("<a href=\"%s\" id=\"%s\" title=\"%s\">%s</a>", verificationUrl, verificationUrl, verificationUrl, verificationUrl));
         }
     }
+
+
 }

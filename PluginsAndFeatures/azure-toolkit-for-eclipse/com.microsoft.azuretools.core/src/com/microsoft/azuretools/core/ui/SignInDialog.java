@@ -5,25 +5,39 @@
 
 package com.microsoft.azuretools.core.ui;
 
-import com.microsoft.azure.toolkit.lib.Azure;
-import com.microsoft.azure.toolkit.lib.auth.AzureAccount;
-import com.microsoft.azuretools.adauth.StringUtils;
+import static com.microsoft.azuretools.telemetry.TelemetryConstants.ACCOUNT;
+import static com.microsoft.azuretools.telemetry.TelemetryConstants.AZURE_ENVIRONMENT;
+import static com.microsoft.azuretools.telemetry.TelemetryConstants.SIGNIN;
+import static com.microsoft.azuretools.telemetry.TelemetryConstants.SIGNIN_METHOD;
+
+import java.lang.reflect.InvocationTargetException;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.function.Supplier;
+
+import com.microsoft.azure.hdinsight.sdk.rest.spark.Application;
+import com.microsoft.azure.toolkit.lib.auth.core.devicecode.DeviceCodeAccount;
+import com.microsoft.azure.toolkit.lib.auth.model.AccountEntity;
+import com.microsoft.azure.toolkit.lib.auth.util.AzureEnvironmentUtils;
+import com.microsoft.azure.toolkit.lib.common.task.AzureTask;
+import com.microsoft.azuretools.adauth.IDeviceLoginUI;
 import com.microsoft.azuretools.authmanage.AuthMethod;
-import com.microsoft.azuretools.authmanage.AuthMethodManager;
-import com.microsoft.azuretools.authmanage.models.AuthMethodDetails;
-import com.microsoft.azuretools.azurecommons.helpers.Nullable;
-import com.microsoft.azuretools.core.Activator;
-import com.microsoft.azuretools.core.components.AzureTitleAreaDialogWrapper;
-import com.microsoft.azuretools.sdkmanage.IdentityAzureManager;
-import com.microsoft.azuretools.telemetrywrapper.ErrorType;
-import com.microsoft.azuretools.telemetrywrapper.EventType;
-import com.microsoft.azuretools.telemetrywrapper.EventUtil;
-import com.microsoft.azuretools.telemetrywrapper.Operation;
-import com.microsoft.azuretools.telemetrywrapper.TelemetryManager;
+import lombok.Lombok;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.ILog;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.preferences.ConfigurationScope;
+import org.eclipse.equinox.security.storage.ISecurePreferences;
+import org.eclipse.equinox.security.storage.SecurePreferencesFactory;
+import org.eclipse.equinox.security.storage.StorageException;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.ProgressMonitorDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
@@ -37,33 +51,56 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.Text;
+import org.osgi.service.prefs.BackingStoreException;
+import org.osgi.service.prefs.Preferences;
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
+import com.microsoft.aad.msal4j.MsalClientException;
+import com.microsoft.azure.toolkit.lib.Azure;
+import com.microsoft.azure.toolkit.lib.auth.AzureAccount;
+import com.microsoft.azure.toolkit.lib.auth.AzureCloud;
+import com.microsoft.azure.toolkit.lib.auth.model.AuthConfiguration;
+import com.microsoft.azure.toolkit.lib.auth.model.AuthType;
+import com.microsoft.azure.toolkit.lib.common.bundle.AzureString;
+import com.microsoft.azure.toolkit.lib.common.exception.AzureToolkitRuntimeException;
+import com.microsoft.azure.toolkit.lib.common.operation.AzureOperationBundle;
+import com.microsoft.azure.toolkit.lib.common.task.AzureTaskManager;
+import com.microsoft.azuretools.authmanage.models.AuthMethodDetails;
+import com.microsoft.azuretools.azurecommons.helpers.Nullable;
+import com.microsoft.azuretools.core.Activator;
+import com.microsoft.azuretools.core.components.AzureTitleAreaDialogWrapper;
+import com.microsoft.azuretools.core.utils.EclipseAzureTaskManager;
+import com.microsoft.azuretools.sdkmanage.IdentityAzureManager;
+import com.microsoft.azuretools.telemetrywrapper.ErrorType;
+import com.microsoft.azuretools.telemetrywrapper.EventUtil;
+import com.microsoft.azuretools.telemetrywrapper.Operation;
+import com.microsoft.azuretools.telemetrywrapper.TelemetryManager;
 
-import static com.microsoft.azuretools.telemetry.TelemetryConstants.ACCOUNT;
-import static com.microsoft.azuretools.telemetry.TelemetryConstants.SIGNIN;
+import lombok.Getter;
+import lombok.SneakyThrows;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+import rx.Single;
 
 public class SignInDialog extends AzureTitleAreaDialogWrapper {
     private static final String AZURE_SIGN_IN = "Azure Sign In";
     private static ILog LOG = Activator.getDefault().getLog();
-    private Text textAuthenticationFilePath;
-    private Button rbtnDevice;
-    private Button rbtnAutomated;
-    private Label lblAuthenticationFile;
-    private Button btnBrowse;
+    private Button btnAzureCli;
+    private Button btnDeviceCode;
+    private Button btnSPRadio;
+    private Label lblAzureCli;
     private Label lblDeviceInfo;
-    private Label lblAutomatedInfo;
+    private Label lblSP;
 
     private AuthMethodDetails authMethodDetails;
     private String accountEmail;
     FileDialog fileDialog;
+
+    private AuthConfiguration data = new AuthConfiguration();
 
     public AuthMethodDetails getAuthMethodDetails() {
         return authMethodDetails;
@@ -71,12 +108,15 @@ public class SignInDialog extends AzureTitleAreaDialogWrapper {
 
     /**
      * Create the dialog.
+     *
      * @param parentShell
      */
     public SignInDialog(Shell parentShell) {
         super(parentShell);
         setHelpAvailable(false);
         setShellStyle(SWT.DIALOG_TRIM | SWT.RESIZE | SWT.APPLICATION_MODAL);
+        AzureAccount az = Azure.az(AzureAccount.class);
+        System.out.println("2:" + az.toString());
     }
 
     public static SignInDialog go(Shell parentShell, AuthMethodDetails authMethodDetails) {
@@ -98,6 +138,7 @@ public class SignInDialog extends AzureTitleAreaDialogWrapper {
 
     /**
      * Create contents of the dialog.
+     *
      * @param parent
      */
     @Override
@@ -118,186 +159,328 @@ public class SignInDialog extends AzureTitleAreaDialogWrapper {
         group.setText("Authentication Method");
         group.setLayout(new GridLayout(1, false));
 
-        rbtnDevice = new Button(group, SWT.RADIO);
-        rbtnDevice.setSelection(true);
-        rbtnDevice.addSelectionListener(new SelectionAdapter() {
+        btnAzureCli = createRadioButton(group, "Azure CLI", AuthType.AZURE_CLI);
+        lblAzureCli = createDescriptionLabel(group, "Consume your existing Azure CLI credential..");
+
+        btnDeviceCode = createRadioButton(group, "Device Login", AuthType.DEVICE_CODE);
+        lblDeviceInfo = createDescriptionLabel(group, "You will need to open an external browser and sign in with a generated device code.");
+
+        btnSPRadio = createRadioButton(group, "Service Principal", AuthType.SERVICE_PRINCIPAL);
+
+        lblSP = createDescriptionLabel(group, "Use Azure Active Directory service principal for sign in.");
+
+//        new Label(compositeAutomated, SWT.NONE);
+//        new Label(compositeAutomated, SWT.NONE);
+
+
+        return area;
+    }
+
+    private Button createRadioButton(Composite parent, String label, AuthType type) {
+        final Button radioButton = new Button(parent, SWT.RADIO);
+        radioButton.addSelectionListener(new SelectionAdapter() {
             @Override
             public void widgetSelected(SelectionEvent e) {
-                if (rbtnDevice.getSelection()) {
-                    rbtnDevice.setFocus();
-                    enableAutomatedAuthControls(false);
+                if (radioButton.getSelection()) {
+                    // Set the radio button to be focused or the default one will be selected when refresh
+                    // For issue https://github.com/microsoft/azure-tools-for-java/issues/3543
+                    radioButton.setFocus();
+                    data.setType(type);
+                    syncControlControls();
                 }
             }
         });
-        rbtnDevice.setText("Device Login");
+        radioButton.setText(label);
+        return radioButton;
+    }
 
-        Composite compositeDevice = new Composite(group, SWT.NONE);
+    private Label createDescriptionLabel(Composite parent, String description) {
+        Composite compositeDevice = new Composite(parent, SWT.NONE);
         GridData gdCompositeDevice = new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1);
         gdCompositeDevice.heightHint = 38;
         gdCompositeDevice.widthHint = 66;
         compositeDevice.setLayoutData(gdCompositeDevice);
         compositeDevice.setLayout(new GridLayout(1, false));
-
-        lblDeviceInfo = new Label(compositeDevice, SWT.WRAP);
+        Label label = new Label(compositeDevice, SWT.WRAP);
         GridData gdLblDeviceInfo = new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1);
         gdLblDeviceInfo.horizontalIndent = 11;
-        lblDeviceInfo.setLayoutData(gdLblDeviceInfo);
-        lblDeviceInfo.setText("You will need to open an external browser and sign in with a generated device code.");
-
-        rbtnAutomated = new Button(group, SWT.RADIO);
-        rbtnAutomated.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(SelectionEvent e) {
-                if (rbtnAutomated.getSelection()) {
-                    // Set the radio button to be focused or the default one will be selected when refresh
-                    // For issue https://github.com/microsoft/azure-tools-for-java/issues/3543
-                    rbtnAutomated.setFocus();
-                    enableAutomatedAuthControls(true);
-                }
-            }
-        });
-        rbtnAutomated.setText("Service Principal");
-
-        Composite compositeAutomated = new Composite(group, SWT.NONE);
-        compositeAutomated.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
-        compositeAutomated.setLayout(new GridLayout(3, false));
-
-        lblAutomatedInfo = new Label(compositeAutomated, SWT.WRAP | SWT.HORIZONTAL);
-        lblAutomatedInfo.setEnabled(false);
-        GridData gdLblAutomatedInfo = new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1);
-        gdLblAutomatedInfo.widthHint = 483;
-        gdLblAutomatedInfo.horizontalIndent = 11;
-        gdLblAutomatedInfo.heightHint = 49;
-        lblAutomatedInfo.setLayoutData(gdLblAutomatedInfo);
-        lblAutomatedInfo.setText("An authentication file with credentials for an Azure Active Directory service" +
-                " principal will be used for automated sign ins.");
-
-        lblAuthenticationFile = new Label(compositeAutomated, SWT.NONE);
-        lblAuthenticationFile.setEnabled(false);
-        GridData gdLblAuthenticationFile = new GridData(SWT.LEFT, SWT.CENTER, false, false, 1, 1);
-        gdLblAuthenticationFile.horizontalIndent = 10;
-        lblAuthenticationFile.setLayoutData(gdLblAuthenticationFile);
-        lblAuthenticationFile.setText("Authentication file:");
-
-        textAuthenticationFilePath = new Text(compositeAutomated, SWT.BORDER | SWT.READ_ONLY);
-        textAuthenticationFilePath.setEnabled(false);
-        GridData gdTextAuthenticationFilePath = new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1);
-        gdTextAuthenticationFilePath.horizontalIndent = 10;
-        textAuthenticationFilePath.setLayoutData(gdTextAuthenticationFilePath);
-
-        btnBrowse = new Button(compositeAutomated, SWT.NONE);
-        btnBrowse.setEnabled(false);
-        btnBrowse.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(SelectionEvent e) {
-                doSelectCredFilepath();
-            }
-        });
-        btnBrowse.setText("Browse...");
-
-        fileDialog = new FileDialog(btnBrowse.getShell(), SWT.OPEN);
-        fileDialog.setText("Select Authentication File");
-        fileDialog.setFilterPath(System.getProperty("user.home"));
-        fileDialog.setFilterExtensions(new String[]{"*.azureauth", "*.*"});
-
-        return area;
+        label.setLayoutData(gdLblDeviceInfo);
+        label.setText(description);
+        return label;
+        //
     }
 
-    private void enableAutomatedAuthControls(boolean enabled) {
+    private void syncControlControls() {
         setErrorMessage(null);
-        lblDeviceInfo.setEnabled(!enabled);
-        lblAutomatedInfo.setEnabled(enabled);
-        lblAuthenticationFile.setEnabled(enabled);
-        lblAuthenticationFile.setEnabled(enabled);
-        textAuthenticationFilePath.setEnabled(enabled);
-        btnBrowse.setEnabled(enabled);
+        AuthType type = data.getType();
+        lblDeviceInfo.setEnabled(type == AuthType.DEVICE_CODE);
+        lblAzureCli.setEnabled(type == AuthType.AZURE_CLI);
+        boolean spLoginSelected = type == AuthType.SERVICE_PRINCIPAL;
+        lblSP.setEnabled(spLoginSelected);
     }
 
+    @SneakyThrows
     @Override
     public void okPressed() {
-        AuthMethodDetails authMethodDetailsResult = new AuthMethodDetails();
-        if (rbtnDevice.getSelection()) {
-            doSignIn();
-            if (StringUtils.isNullOrEmpty(accountEmail)) {
-                System.out.println("Canceled by the user.");
-                return;
-            }
-            authMethodDetailsResult.setAuthMethod(AuthMethod.DC);
-            authMethodDetailsResult.setAccountEmail(accountEmail);
-        } else { // automated
-            String authPath = textAuthenticationFilePath.getText();
-            EventUtil.logEvent(EventType.info, ACCOUNT, SIGNIN, new HashMap<>(), null);
-            if (StringUtils.isNullOrWhiteSpace(authPath)) {
-                this.setErrorMessage("Select authentication file");
-                return;
-            }
-
-            authMethodDetailsResult.setAuthMethod(AuthMethod.SP);
-            // TODO: check the file is valid
-            authMethodDetailsResult.setCredFilePath(authPath);
+        Preferences preferences = ConfigurationScope.INSTANCE.getNode("com.microsoft.azure.eclipse.preferences.test");
+        Preferences sub1 = preferences.node("node1");
+        Preferences sub2 = preferences.node("node2");
+        String s = sub1.get("h1", null);
+        sub1.put("h1", "Hello again2");
+        String s2 = sub2.get("h1", "Moi2n");
+        
+        
+        ISecurePreferences preferences2 = SecurePreferencesFactory
+                .getDefault();
+        ISecurePreferences node = preferences2.node("info");
+        try {
+            String t = node.get("user", "vogella22");
+            node.put("password", "123", true);
+        } catch (StorageException e1) {
+            e1.printStackTrace();
+        }
+        try {
+            // forces the application to save the preferences
+            preferences.flush();
+        } catch (BackingStoreException e) {
+            e.printStackTrace();
         }
 
-        this.authMethodDetails = authMethodDetailsResult;
+
+        AuthConfiguration auth = new AuthConfiguration();
+        if (btnAzureCli.getSelection()) {
+            auth.setType(AuthType.AZURE_CLI);
+
+        } else if (btnDeviceCode.getSelection()) {
+            auth.setType(AuthType.DEVICE_CODE);
+            super.okPressed();
+            doDeviceCodeLogin();
+            return;
+
+        } else if (btnSPRadio.getSelection()) {
+            auth.setType(AuthType.SERVICE_PRINCIPAL);
+            ServicePrincipalLoginDialog servicePrincipalLoginDialog = new ServicePrincipalLoginDialog(this.getShell());
+            if (servicePrincipalLoginDialog.open() == Window.CANCEL) {
+                return;
+            }
+            auth = servicePrincipalLoginDialog.getModel();
+            System.out.println();
+        }
+
+        IRunnableWithProgress op = new YourThread(10, auth);
+
+        try {
+            new ProgressMonitorDialog(new Shell()).run(true, true, op);
+        } catch (InvocationTargetException | InterruptedException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+//        this.authMethodDetails = authMethodDetailsResult;
 
         super.okPressed();
     }
 
-    private void doSelectCredFilepath() {
-        setErrorMessage(null);
-        String path = fileDialog.open();
-        if (path == null) {
-            return;
-        }
-        textAuthenticationFilePath.setText(path);
+    private void doDeviceCodeLogin() {
+        DeviceCodeAccount account = loginDeviceCodeSingle();
+        final IDeviceLoginUI deviceLoginUI = new DeviceLoginWindow();
+        new Thread(()  -> {
+        	CompletableFuture<AuthMethodDetails> future =
+                    account.continueLogin()
+                            .subscribeOn(Schedulers.boundedElastic())
+                    .map(ac -> {
+                    	System.out.println("got entity");
+                    	return fromAccountEntity(ac.getEntity());	
+                    })
+                    .doFinally(signal -> {
+                    	deviceLoginUI.closePrompt();
+                    	System.out.println("doFinally");
+                    })
+                    .toFuture();
+            deviceLoginUI.setFuture(future);
+        }).start();
+        deviceLoginUI.promptDeviceCode(account.getDeviceCode());
+        
+        
     }
 
-    private AuthMethodManager getAuthMethodManager() {
-        return AuthMethodManager.getInstance();
+    private static AuthMethodDetails fromAccountEntity(AccountEntity entity) {
+        final AuthMethodDetails authMethodDetails = new AuthMethodDetails();
+        authMethodDetails.setAuthMethod(AuthMethod.IDENTITY);
+        authMethodDetails.setAuthType(entity.getType());
+        authMethodDetails.setClientId(entity.getClientId());
+        authMethodDetails.setTenantId(CollectionUtils.isEmpty(entity.getTenantIds()) ? "" : entity.getTenantIds().get(0));
+        authMethodDetails.setAzureEnv(AzureEnvironmentUtils.getCloudNameForAzureCli(entity.getEnvironment()));
+        authMethodDetails.setAccountEmail(entity.getEmail());
+        return authMethodDetails;
     }
+
+
+    private DeviceCodeAccount loginDeviceCodeSingle() {
+        final AzureAccount az = Azure.az(AzureAccount.class);
+        CompletableFuture<DeviceCodeAccount> result = new CompletableFuture<>();
+        IRunnableWithProgress op = new IRunnableWithProgress() {
+            @Override
+            public void run(IProgressMonitor indicator) throws InvocationTargetException, InterruptedException {
+                DeviceCodeAccount ac = (DeviceCodeAccount) checkCanceled(indicator, az.loginAsync(AuthType.DEVICE_CODE, true), () -> {
+                    result.cancel(true);
+                    throw Lombok.sneakyThrow(new InterruptedException("user cancel"));
+                });
+                result.complete(ac);
+            }
+        };
+
+        try {
+            new ProgressMonitorDialog(this.getShell()).run(true, true, op);
+        } catch (InvocationTargetException | InterruptedException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        try {
+            return result.get();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+	private class YourThread implements IRunnableWithProgress {
+        private int workload;
+
+        private AuthConfiguration auth;
+        @Getter
+        private AuthMethodDetails authMethodDetailsResult;
+
+        public YourThread(int workload, AuthConfiguration auth) {
+            this.workload = workload;
+            this.auth = auth;
+        }
+
+        @Override
+        public void run(IProgressMonitor indicator) throws InvocationTargetException, InterruptedException {
+            // Tell the user what you are doing
+            indicator.beginTask("Sign in", IProgressMonitor.UNKNOWN);
+
+
+            authMethodDetailsResult = new AuthMethodDetails();
+            switch (auth.getType()) {
+                case SERVICE_PRINCIPAL:
+                    authMethodDetailsResult = call(() -> checkCanceled(indicator, IdentityAzureManager.getInstance().signInServicePrincipal(auth),
+                            AuthMethodDetails::new), "sp");
+                    break;
+                case AZURE_CLI:
+                    authMethodDetailsResult = call(() -> checkCanceled(indicator, IdentityAzureManager.getInstance().signInAzureCli(),
+                            AuthMethodDetails::new), "az");
+                    break;
+                case OAUTH2:
+                    authMethodDetailsResult = call(() -> checkCanceled(indicator, IdentityAzureManager.getInstance().signInOAuth(),
+                            AuthMethodDetails::new), "oauth");
+                    break;
+                default:
+                    break;
+            }
+            indicator.done();
+        }
+
+    }
+
+
+    private static Single<AuthMethodDetails> loginNonDeviceCodeSingle(AuthConfiguration auth) {
+        final AzureString title = AzureOperationBundle.title("account.sign_in");
+        final EclipseAzureTaskManager.AzureEclipseTask<AuthMethodDetails> task = new EclipseAzureTaskManager.AzureEclipseTask<AuthMethodDetails>(null, title, true, () -> {
+//            final IProgressMonitor indicator = task.getMonitor();
+//            indicator.setIndeterminate(true);
+//            return doLogin(indicator, auth);
+            return new AuthMethodDetails();
+        });
+        return AzureTaskManager.getInstance().runInBackgroundAsObservable(task).toSingle();
+    }
+
+    private static <T> T call(Callable<T> loginCallable, String authMethod) {
+        final Operation operation = TelemetryManager.createOperation(ACCOUNT, SIGNIN);
+        final Map<String, String> properties = new HashMap<>();
+        properties.put(SIGNIN_METHOD, authMethod);
+
+        try {
+            operation.start();
+            operation.trackProperties(properties);
+            operation.trackProperty(AZURE_ENVIRONMENT, Azure.az(AzureCloud.class).getName());
+            return loginCallable.call();
+        } catch (Exception e) {
+            if (shouldNoticeErrorToUser(e)) {
+                EventUtil.logError(operation, ErrorType.userError, e, properties, null);
+            }
+            throw new AzureToolkitRuntimeException(e.getMessage(), e);
+        } finally {
+            operation.complete();
+        }
+    }
+
+    private static <T> T checkCanceled(IProgressMonitor indicator, Mono<? extends T> mono, Supplier<T> supplier) {
+        final Mono<T> cancelMono = Flux.interval(Duration.ofSeconds(1)).map(ignore -> indicator.isCanceled())
+                .any(cancel -> cancel).map(ignore -> supplier.get()).subscribeOn(Schedulers.boundedElastic());
+        return Mono.firstWithSignal(cancelMono, mono.subscribeOn(Schedulers.boundedElastic())).block();
+    }
+
+    private static boolean shouldNoticeErrorToUser(Throwable cause) {
+        if (cause instanceof InterruptedException) {
+            return false;
+        }
+        if (cause instanceof MsalClientException && StringUtils.equals(cause.getMessage(), "No Authorization code was returned from the server")) {
+            return false;
+        }
+        return true;
+    }
+
 
     @Nullable
-    private synchronized IdentityAzureManager doSignIn() {
+    private synchronized void doSignIn() {
         try {
-            final IdentityAzureManager dcAuthManager = IdentityAzureManager.getInstance();
-
-            if (dcAuthManager.isSignedIn()) {
-                doSignOut();
-            }
-            signInAsync(dcAuthManager);
-            accountEmail = Azure.az(AzureAccount.class).account().getEntity().getEmail();
-
-            return dcAuthManager;
+//            final BaseADAuthManager dcAuthManager = AuthMethod.DC.getAdAuthManager();
+//
+//            if (dcAuthManager.isSignedIn()) {
+//                doSignOut();
+//            }
+//            signInAsync(dcAuthManager);
+//            accountEmail = dcAuthManager.getAccountEmail();
+//
+//            return dcAuthManager;
         } catch (Exception ex) {
             System.out.println("doSignIn@SingInDialog: " + ex.getMessage());
             ex.printStackTrace();
             LOG.log(new Status(IStatus.ERROR, Activator.PLUGIN_ID, "doSignIn@SingInDialog", ex));
         }
 
-        return null;
+        return;
     }
 
-    private void signInAsync(final IdentityAzureManager dcAuthManager) throws InvocationTargetException, InterruptedException {
+    private void signInAsync() throws InvocationTargetException, InterruptedException {
         Operation operation = TelemetryManager.createOperation(ACCOUNT, SIGNIN);
         IRunnableWithProgress op = (monitor) -> {
             operation.start();
             monitor.beginTask("Signing In...", IProgressMonitor.UNKNOWN);
-            try {
-                EventUtil.logEvent(EventType.info, operation, new HashMap<>(), null);
-                dcAuthManager.signInOAuth().block();
-            } catch (Exception ex) {
-                EventUtil.logError(operation, ErrorType.userError, ex, new HashMap<>(), null);
-                System.out.println("run@ProgressDialog@signInAsync@SingInDialog: " + ex.getMessage());
-                Display.getDefault().asyncExec(() -> ErrorWindow.go(getShell(), ex.getMessage(), "Sign In Error"));
-            } finally {
-                operation.complete();
-            }
+//            try {
+//                EventUtil.logEvent(EventType.info, operation, signInDCProp, null);
+//                dcAuthManager.signIn(null);
+//            } catch (AuthCanceledException ex) {
+//                EventUtil.logError(operation, ErrorType.userError, ex, signInDCProp, null);
+//                System.out.println(ex.getMessage());
+//            } catch (Exception ex) {
+//                EventUtil.logError(operation, ErrorType.userError, ex, signInDCProp, null);
+//                System.out.println("run@ProgressDialog@signInAsync@SingInDialog: " + ex.getMessage());
+//                Display.getDefault().asyncExec(() -> ErrorWindow.go(getShell(), ex.getMessage(), "Sign In Error"));
+//            } finally {
+//                operation.complete();
+//            }
         };
-        new ProgressMonitorDialog(this.getShell()).run(true, false, op);
+        new ProgressMonitorDialog(this.getShell()).run(true, true, op);
     }
 
     private void doSignOut() {
         accountEmail = null;
         // AuthMethod.AD is deprecated.
-        AuthMethodManager.getInstance().signOut();
+
     }
 }

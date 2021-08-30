@@ -28,14 +28,20 @@ import com.microsoft.azure.toolkit.intellij.arm.action.EditDeploymentAction;
 import com.microsoft.azure.toolkit.intellij.arm.action.ExportParameterAction;
 import com.microsoft.azure.toolkit.intellij.arm.action.ExportTemplateAction;
 import com.microsoft.azure.toolkit.intellij.arm.action.UpdateDeploymentAction;
-import com.microsoft.azure.toolkit.intellij.webapp.docker.action.PushToContainerRegistryAction;
+import com.microsoft.azure.toolkit.intellij.connector.mysql.ConnectToMySQLAction;
+import com.microsoft.azure.toolkit.intellij.connector.sql.ConnectToSQLAction;
+import com.microsoft.azure.toolkit.intellij.function.action.CreateFunctionAppAction;
+import com.microsoft.azure.toolkit.intellij.function.action.DeployFunctionAppAction;
+import com.microsoft.azure.toolkit.intellij.mysql.action.CreateMySQLAction;
+import com.microsoft.azure.toolkit.intellij.mysql.action.OpenMySQLByToolsAction;
 import com.microsoft.azure.toolkit.intellij.redis.action.CreateRedisCacheAction;
-import com.microsoft.intellij.serviceexplorer.azure.storage.ConfirmDialogAction;
-import com.microsoft.intellij.serviceexplorer.azure.storage.CreateQueueAction;
-import com.microsoft.intellij.serviceexplorer.azure.storage.CreateTableAction;
-import com.microsoft.intellij.serviceexplorer.azure.storage.ModifyExternalStorageAccountAction;
+import com.microsoft.azure.toolkit.intellij.sqlserver.CreateSqlServerAction;
+import com.microsoft.azure.toolkit.intellij.sqlserver.OpenSqlServerByToolsAction;
 import com.microsoft.azure.toolkit.intellij.storage.CreateStorageAccountAction;
 import com.microsoft.azure.toolkit.intellij.vm.CreateVMAction;
+import com.microsoft.azure.toolkit.intellij.webapp.action.CreateWebAppAction;
+import com.microsoft.azure.toolkit.intellij.webapp.action.DeployWebAppAction;
+import com.microsoft.azure.toolkit.intellij.webapp.docker.action.PushToContainerRegistryAction;
 import com.microsoft.sqlbigdata.serverexplore.action.LinkSqlServerBigDataClusterAction;
 import com.microsoft.tooling.msservices.serviceexplorer.Node;
 import com.microsoft.tooling.msservices.serviceexplorer.NodeActionListener;
@@ -50,8 +56,6 @@ import com.microsoft.tooling.msservices.serviceexplorer.azure.mysql.MySQLNode;
 import com.microsoft.tooling.msservices.serviceexplorer.azure.rediscache.RedisCacheModule;
 import com.microsoft.tooling.msservices.serviceexplorer.azure.sqlserver.SqlServerModule;
 import com.microsoft.tooling.msservices.serviceexplorer.azure.sqlserver.SqlServerNode;
-import com.microsoft.tooling.msservices.serviceexplorer.azure.storage.ExternalStorageNode;
-import com.microsoft.tooling.msservices.serviceexplorer.azure.storage.QueueModule;
 import com.microsoft.tooling.msservices.serviceexplorer.azure.storage.StorageModule;
 import com.microsoft.tooling.msservices.serviceexplorer.azure.storage.TableModule;
 import com.microsoft.tooling.msservices.serviceexplorer.azure.vmarm.VMArmModule;
@@ -72,10 +76,6 @@ public class NodeActionsMap {
     static {
         node2Actions.put(VMArmModule.class, new ImmutableList.Builder<Class<? extends NodeActionListener>>()
                 .add(CreateVMAction.class).build());
-        node2Actions.put(QueueModule.class, new ImmutableList.Builder<Class<? extends NodeActionListener>>()
-                .add(CreateQueueAction.class).build());
-        node2Actions.put(TableModule.class, new ImmutableList.Builder<Class<? extends NodeActionListener>>()
-                .add(CreateTableAction.class).build());
         node2Actions.put(StorageModule.class, new ImmutableList.Builder<Class<? extends NodeActionListener>>()
                 .add(CreateStorageAccountAction.class).build());
         node2Actions.put(RedisCacheModule.class, new ImmutableList.Builder<Class<? extends NodeActionListener>>()
@@ -92,9 +92,6 @@ public class NodeActionsMap {
                 .add(CreateSqlServerAction.class).build());
         // todo: what is ConfirmDialogAction?
         //noinspection unchecked
-        node2Actions.put(ExternalStorageNode.class,
-                new ImmutableList.Builder<Class<? extends NodeActionListener>>()
-                        .add(ConfirmDialogAction.class, ModifyExternalStorageAccountAction.class).build());
         node2Actions.put(HDInsightRootModuleImpl.class,
                 new ImmutableList.Builder<Class<? extends NodeActionListener>>()
                         .add(AddNewClusterAction.class).build());

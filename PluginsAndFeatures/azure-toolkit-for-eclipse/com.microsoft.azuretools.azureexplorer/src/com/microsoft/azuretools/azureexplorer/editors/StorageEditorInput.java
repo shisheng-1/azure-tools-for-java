@@ -22,8 +22,6 @@
 
 package com.microsoft.azuretools.azureexplorer.editors;
 
-import com.microsoft.azure.management.storage.StorageAccount;
-import com.microsoft.tooling.msservices.model.storage.ClientStorageAccount;
 import com.microsoft.tooling.msservices.model.storage.StorageServiceTreeItem;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.IEditorInput;

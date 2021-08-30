@@ -26,8 +26,12 @@ import static com.microsoft.azuretools.telemetry.TelemetryConstants.CREATE_REDIS
 import static com.microsoft.azuretools.telemetry.TelemetryConstants.REDIS;
 
 import com.microsoft.azure.toolkit.lib.auth.AzureAccount;
+import com.microsoft.azure.toolkit.lib.common.bundle.AzureString;
 import com.microsoft.azure.toolkit.lib.common.model.Region;
 import com.microsoft.azure.toolkit.lib.common.model.Subscription;
+import com.microsoft.azure.toolkit.lib.common.operation.AzureOperationBundle;
+import com.microsoft.azure.toolkit.lib.common.task.AzureTask;
+import com.microsoft.azure.toolkit.lib.common.task.AzureTaskManager;
 import com.microsoft.azuretools.core.mvp.model.AzureMvpModel;
 import com.microsoft.azuretools.core.mvp.model.ResourceEx;
 import com.microsoft.azuretools.telemetrywrapper.ErrorType;
@@ -313,11 +317,19 @@ public class CreateRedisCacheForm extends AzureTitleAreaDialogWrapper {
         cbSubs.addSelectionListener(new SelectionAdapter() {
             @Override
             public void widgetSelected(SelectionEvent e) {
-                currentSub = selectedSubscriptions.get(cbSubs.getSelectionIndex());
-                if (loaded) {
-                    fillLocationsAndResourceGrps(currentSub);
+                if (!loaded) {
+                    return;
                 }
-                validateFields();
+                currentSub = selectedSubscriptions.get(cbSubs.getSelectionIndex());
+                AzureTaskManager.getInstance().runOnPooledThread(() -> {
+                    List<Region> locations = com.microsoft.azure.toolkit.lib.Azure.az(AzureAccount.class).listRegions(currentSub.getId());
+                    AzureTaskManager.getInstance().runOnPooledThread(() -> {
+                        fillLocationsAndResourceGrps(currentSub, locations);
+                        validateFields();
+                    });
+
+                });
+
             }
         });
         if (selectedSubscriptions.size() > 0) {
@@ -392,27 +404,40 @@ public class CreateRedisCacheForm extends AzureTitleAreaDialogWrapper {
                 }
             }
         });
-
-        DefaultLoader.getIdeHelper().runInBackground(null,
-                MessageHandler.getResourceString(resourceBundle, LOADING_LOCATION_AND_GRPS), false, true,
-                MessageHandler.getResourceString(resourceBundle, LOADING_LOCATION_AND_GRPS), new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            DefaultLoader.getIdeHelper().invokeLater(new Runnable() {
-                                @Override
-                                public void run() {
-                                    fillLocationsAndResourceGrps(currentSub);
-                                    cbLocations.setEnabled(true);
+        final AzureString title = AzureString.fromString(MessageHandler.getResourceString(resourceBundle, LOADING_LOCATION_AND_GRPS));
+        AzureTask azureTask = new AzureTask(null, title, false, () -> {
+            List<Region> locations = com.microsoft.azure.toolkit.lib.Azure.az(AzureAccount.class).listRegions(currentSub.getId());
+            AzureTaskManager.getInstance().runLater(() -> {
+                fillLocationsAndResourceGrps(currentSub, locations);
+                cbLocations.setEnabled(true);
                                     loaded = true;
                                     validateFields();
-                                }
-                            });
-                        } catch (Exception ex) {
-                            LOG.log(MessageHandler.getCommonStr(LOAD_LOCATION_AND_RESOURCE_ERROR), ex);
-                        }
-                    }
-                });
+
+            });
+
+        });
+        AzureTaskManager.getInstance().runInBackground(azureTask);
+
+//        AzureTaskManager.getInstance().runInBackground(null,
+//                MessageHandler.getResourceString(resourceBundle, LOADING_LOCATION_AND_GRPS), false, true,
+//                MessageHandler.getResourceString(resourceBundle, LOADING_LOCATION_AND_GRPS), new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        try {
+//                            DefaultLoader.getIdeHelper().invokeLater(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    fillLocationsAndResourceGrps(currentSub);
+//                                    cbLocations.setEnabled(true);
+//                                    loaded = true;
+//                                    validateFields();
+//                                }
+//                            });
+//                        } catch (Exception ex) {
+//                            LOG.log(MessageHandler.getCommonStr(LOAD_LOCATION_AND_RESOURCE_ERROR), ex);
+//                        }
+//                    }
+//                });
 
         return area;
     }
@@ -510,12 +535,10 @@ public class CreateRedisCacheForm extends AzureTitleAreaDialogWrapper {
         super.okPressed();
     }
 
-    private void fillLocationsAndResourceGrps(Subscription selectedSub) {
+    private void fillLocationsAndResourceGrps(Subscription selectedSub, List <Region> locations) {
         cbLocations.removeAll();
-        List<? extends Region> locations = com.microsoft.azure.toolkit.lib.Azure.az(AzureAccount.class).listRegions(selectedSub.getId());
         if (locations != null) {
-            sortedLocations = locations.stream().sorted(Comparator.comparing(Region::getLabel))
-                    .collect(Collectors.toList());
+            sortedLocations = locations;
             for (Region location : sortedLocations) {
                 cbLocations.add(location.getLabel());
             }
