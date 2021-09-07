@@ -10,12 +10,12 @@ import javax.annotation.Nullable;
 
 public interface IPropertyStore {
     @Nullable
-    String getProperty(@Nonnull String serviceName, @Nonnull String key);
+    String getProperty(@Nullable String serviceName, @Nonnull String key);
 
     @Nullable
-    String getProperty(@Nonnull String serviceName, @Nonnull String key, @Nullable String defaultValue);
+    String getProperty(@Nullable String serviceName, @Nonnull String key, @Nullable String defaultValue);
 
-    void setProperty(@Nonnull String serviceName, @Nonnull String key, @Nullable String value);
+    void setProperty(@Nullable String serviceName, @Nonnull String key, @Nullable String value);
 
     void load();
 }

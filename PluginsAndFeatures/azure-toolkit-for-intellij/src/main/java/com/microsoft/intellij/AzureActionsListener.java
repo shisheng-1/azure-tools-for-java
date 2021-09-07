@@ -21,6 +21,7 @@ import com.microsoft.azure.hdinsight.common.HDInsightLoader;
 import com.microsoft.azure.toolkit.ide.common.store.AzureStoreManager;
 import com.microsoft.azure.toolkit.intellij.common.action.IntellijAzureActionManager;
 import com.microsoft.azure.toolkit.intellij.common.messager.IntellijAzureMessager;
+import com.microsoft.azure.toolkit.intellij.common.settings.AzureConfigurations;
 import com.microsoft.azure.toolkit.intellij.common.task.IntellijAzureTaskManager;
 import com.microsoft.azure.toolkit.lib.Azure;
 import com.microsoft.azure.toolkit.lib.auth.AzureAccount;
@@ -42,6 +43,7 @@ import com.microsoft.intellij.secure.IdeaSecureStore;
 import com.microsoft.intellij.secure.IdeaTrustStrategy;
 import com.microsoft.intellij.serviceexplorer.NodeActionsMap;
 import com.microsoft.intellij.util.NetworkDiagnose;
+import com.microsoft.intellij.util.PluginHelper;
 import com.microsoft.intellij.util.PluginUtil;
 import com.microsoft.intellij.ui.UIFactory;
 import com.microsoft.tooling.msservices.components.DefaultLoader;
@@ -130,6 +132,10 @@ public class AzureActionsListener implements AppLifecycleListener, PluginCompone
         MvpUIHelperFactory.getInstance().init(new MvpUIHelperImpl());
 
         HDInsightLoader.setHHDInsightHelper(new HDInsightHelperImpl());
+
+        AzureStoreManager.register(new FileStore(PluginHelper.getTemplateFile("azure-data.xml")),
+                AzureConfigurations.getInstance(), IdeaSecureStore.getInstance());
+
         try {
             loadPluginSettings();
         } catch (IOException e) {
@@ -137,7 +143,6 @@ public class AzureActionsListener implements AppLifecycleListener, PluginCompone
         }
         AzureInitializer.initialize();
         if (!AzurePlugin.IS_ANDROID_STUDIO) {
-            AzureStoreManager.register(new FileStore(), new IntellijStore(), IdeaSecureStore.getInstance());
             // enable spark serverless node subscribe actions
             ServiceManager.setServiceProvider(CosmosSparkClusterOpsCtrl.class,
                     new CosmosSparkClusterOpsCtrl(CosmosSparkClusterOps.getInstance()));
