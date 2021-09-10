@@ -27,6 +27,9 @@ import java.util.logging.SimpleFormatter;
 
 import javax.swing.event.EventListenerList;
 
+import com.microsoft.azure.toolkit.eclipse.common.task.EclipseAzureTaskManager;
+import com.microsoft.azure.toolkit.lib.common.messager.AzureMessager;
+import com.microsoft.azure.toolkit.lib.common.task.AzureTaskManager;
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -114,6 +117,7 @@ public class Activator extends AbstractUIPlugin implements PluginComponent {
                 com.microsoft.azuretools.core.utils.Messages.commonPluginID).toString();
         dataFile = Paths.get(pluginInstLoc, File.separator,
                 com.microsoft.azuretools.core.utils.Messages.dataFileName).toString();
+        AzureTaskManager.register(new EclipseAzureTaskManager());
         DefaultLoader.setPluginComponent(this);
         DefaultLoader.setIdeHelper(new IDEHelperImpl());
         SchedulerProviderFactory.getInstance().init(new AppSchedulerProvider());
