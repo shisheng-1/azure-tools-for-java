@@ -11,6 +11,7 @@ import com.intellij.ide.plugins.PluginManager;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ApplicationInfo;
 import com.intellij.openapi.extensions.PluginId;
+import com.microsoft.azure.toolkit.intellij.vm.creation.VMCreationDialog;
 import com.microsoft.intellij.AzureAnAction;
 import com.microsoft.azuretools.telemetry.AppInsightsClient;
 import com.microsoft.azuretools.telemetry.TelemetryConstants;
@@ -29,6 +30,8 @@ public class QualtricsSurveyAction extends AzureAnAction {
 
     @Override
     public boolean onActionPerformed(@NotNull AnActionEvent anActionEvent, @Nullable Operation operation) {
+        VMCreationDialog c = new VMCreationDialog(anActionEvent.getProject());
+        c.showAndGet();
         BrowserUtil.browse(getRequestUrl());
         return true;
     }
