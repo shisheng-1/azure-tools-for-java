@@ -5,10 +5,6 @@
 
 package com.microsoft.azuretools.core.ui;
 
-import com.microsoft.azure.toolkit.lib.auth.model.AuthConfiguration;
-import com.microsoft.azure.toolkit.lib.auth.model.AuthType;
-import com.microsoft.azuretools.core.components.AzureTitleAreaDialogWrapper;
-import lombok.SneakyThrows;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -16,14 +12,27 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.widgets.*;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Group;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Shell;
+
+import com.microsoft.azure.toolkit.lib.auth.model.AuthConfiguration;
+import com.microsoft.azure.toolkit.lib.auth.model.AuthType;
+import com.microsoft.azuretools.core.components.AzureTitleAreaDialogWrapper;
+
+import lombok.SneakyThrows;
 
 public class SignInDialog extends AzureTitleAreaDialogWrapper {
     private static final String AZURE_SIGN_IN = "Azure Sign In";
     private Button btnAzureCli;
+    private Button btnOAuth;
     private Button btnDeviceCode;
     private Button btnSPRadio;
     private Label lblAzureCli;
+    private Label lblOAuth;
     private Label lblDeviceInfo;
     private Label lblSP;
 
@@ -71,6 +80,10 @@ public class SignInDialog extends AzureTitleAreaDialogWrapper {
 
         btnAzureCli = createRadioButton(group, "Azure CLI", AuthType.AZURE_CLI);
         lblAzureCli = createDescriptionLabel(group, "Consume your existing Azure CLI credential..");
+        
+        this.btnOAuth = createRadioButton(group, "OAuth2", AuthType.OAUTH2);
+        this.lblOAuth = createDescriptionLabel(group, "You will need to open an external browser and sign in.");
+
 
         btnDeviceCode = createRadioButton(group, "Device Login", AuthType.DEVICE_CODE);
         lblDeviceInfo = createDescriptionLabel(group, "You will need to open an external browser and sign in with a generated device code.");
@@ -121,8 +134,8 @@ public class SignInDialog extends AzureTitleAreaDialogWrapper {
         AuthType type = data.getType();
         lblDeviceInfo.setEnabled(type == AuthType.DEVICE_CODE);
         lblAzureCli.setEnabled(type == AuthType.AZURE_CLI);
-        boolean spLoginSelected = type == AuthType.SERVICE_PRINCIPAL;
-        lblSP.setEnabled(spLoginSelected);
+        lblSP.setEnabled(type == AuthType.SERVICE_PRINCIPAL);
+        this.lblOAuth.setEnabled(type == AuthType.OAUTH2);
     }
 
     @SneakyThrows
@@ -132,10 +145,11 @@ public class SignInDialog extends AzureTitleAreaDialogWrapper {
             data.setType(AuthType.AZURE_CLI);
         } else if (btnDeviceCode.getSelection()) {
             data.setType(AuthType.DEVICE_CODE);
-
         } else if (btnSPRadio.getSelection()) {
-            data.setType(AuthType.SERVICE_PRINCIPAL);
-        }
+           data.setType(AuthType.SERVICE_PRINCIPAL);
+        } else if (btnOAuth.getSelection()) {
+            data.setType(AuthType.OAUTH2);
+         }
         super.okPressed();
     }
 
