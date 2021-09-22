@@ -13,17 +13,21 @@ import com.intellij.execution.configurations.RunProfileState;
 import com.intellij.execution.filters.TextConsoleBuilderFactory;
 import com.intellij.execution.process.ProcessAdapter;
 import com.intellij.execution.process.ProcessEvent;
+import com.intellij.execution.process.ProcessOutputType;
 import com.intellij.execution.process.ProcessOutputTypes;
 import com.intellij.execution.runners.ProgramRunner;
 import com.intellij.execution.ui.ConsoleView;
 import com.intellij.openapi.project.Project;
+import com.microsoft.azure.toolkit.intellij.common.messager.IntellijAzureMessager;
 import com.microsoft.azure.toolkit.lib.common.exception.AzureToolkitException;
 import com.microsoft.azure.toolkit.lib.common.exception.AzureToolkitRuntimeException;
 import com.microsoft.azure.toolkit.lib.common.messager.AzureMessager;
+import com.microsoft.azure.toolkit.lib.common.messager.IAzureMessage;
 import com.microsoft.azuretools.telemetrywrapper.ErrorType;
 import com.microsoft.azuretools.telemetrywrapper.EventUtil;
 import com.microsoft.azuretools.telemetrywrapper.Operation;
 import com.microsoft.intellij.RunProcessHandler;
+import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import reactor.core.Disposable;
@@ -107,5 +111,23 @@ public abstract class AzureRunProfileState<T> implements RunProfileState {
         processHandler.println(errorMessage, ProcessOutputTypes.STDERR);
         processHandler.notifyComplete();
         AzureMessager.getMessager().error(error);
+    }
+
+    @RequiredArgsConstructor
+    public static class RunStateMessenger extends IntellijAzureMessager {
+        private final RunProcessHandler handler;
+
+        @Override
+        public boolean show(IAzureMessage raw) {
+            if (raw.getType() == IAzureMessage.Type.INFO || raw.getType() == IAzureMessage.Type.WARNING) {
+                handler.setText(raw.getMessage().toString());
+                return true;
+            } else if (raw.getType() == IAzureMessage.Type.SUCCESS) {
+                handler.println(raw.getMessage().toString(), ProcessOutputType.SYSTEM);
+            } else if (raw.getType() == IAzureMessage.Type.ERROR) {
+                handler.println(raw.getContent(), ProcessOutputType.STDERR);
+            }
+            return super.show(raw);
+        }
     }
 }
