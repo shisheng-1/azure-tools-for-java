@@ -46,6 +46,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
 
 import com.microsoft.azure.hdinsight.serverexplore.HDInsightRootModuleImpl;
+import com.microsoft.azure.toolkit.intellij.explorer.AzureExplorer;
 import com.microsoft.azuretools.authmanage.AuthMethodManager;
 import com.microsoft.azuretools.azurecommons.helpers.NotNull;
 import com.microsoft.azuretools.azureexplorer.Activator;
@@ -152,7 +153,10 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
             setHDInsightRootModule(azureModule);
             invisibleRoot = new TreeNode(null);
             invisibleRoot.add(createTreeNode(azureModule));
-
+            com.microsoft.azure.toolkit.ide.common.component.Node<?>[] modules = AzureExplorer.getModules();
+            for(com.microsoft.azure.toolkit.ide.common.component.Node<?> node : modules) {
+            	System.out.println(node.view().getLabel());
+            }
             azureModule.load(false);
         }
     }

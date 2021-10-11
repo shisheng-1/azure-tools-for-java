@@ -265,11 +265,11 @@
     </extension>
     <extension
           point="com.microsoft.azure.toolkit.actions">
-       <actionContributer
+       <actionContributor
              implementation="com.microsoft.azure.toolkit.ide.common.action.ResourceCommonActionsContributor">
-       </actionContributer>
-       <actionContributer
+       </actionContributor>
+       <actionContributor
              implementation="com.microsoft.azure.toolkit.eclipse.common.action.EclipseActionsContributor">
-       </actionContributer>
+       </actionContributor>
     </extension>
 </plugin>
