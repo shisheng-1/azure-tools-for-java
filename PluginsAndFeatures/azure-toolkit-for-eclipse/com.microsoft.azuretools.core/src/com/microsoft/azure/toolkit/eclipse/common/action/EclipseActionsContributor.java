@@ -11,6 +11,7 @@ import com.microsoft.azure.toolkit.ide.common.IActionsContributor;
 import com.microsoft.azure.toolkit.ide.common.action.ResourceCommonActionsContributor;
 import com.microsoft.azure.toolkit.lib.common.action.Action;
 import com.microsoft.azure.toolkit.lib.common.action.AzureActionManager;
+import com.microsoft.azure.toolkit.lib.common.task.AzureTaskManager;
 import com.microsoft.azuretools.core.handlers.SignInCommandHandler;
 import  com.microsoft.azuretools.core.utils.PluginUtil;
 
@@ -24,15 +25,15 @@ public class EclipseActionsContributor implements IActionsContributor {
 
     @Override
     public void registerActions(AzureActionManager am) {
-		am.registerAction(Action.REQUIRE_AUTH,
-				new Action<>(
-						(Runnable r, Object e) -> SignInCommandHandler.requireSignedIn(PluginUtil.getParentShell(), r))
-								.authRequired(false));
+		am.registerAction(Action.REQUIRE_AUTH, new Action<>((Runnable r, Object e) -> {
+			AzureTaskManager.getInstance().runLater(() -> {
+				SignInCommandHandler.requireSignedIn(PluginUtil.getParentShell(), r);
+			});
+		}).authRequired(false));
     }
     
     @Override
     public void registerHandlers(AzureActionManager am) {
-        // TODO Auto-generated method stub
         am.<String>registerHandler(ResourceCommonActionsContributor.OPEN_URL, Objects::nonNull, PluginUtil::openLinkInBrowser);
     }
 

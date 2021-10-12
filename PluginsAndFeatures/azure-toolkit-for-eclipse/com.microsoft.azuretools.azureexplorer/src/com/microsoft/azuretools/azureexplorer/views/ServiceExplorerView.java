@@ -103,6 +103,7 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
      */
     class ViewContentProvider implements IStructuredContentProvider, ITreeContentProvider {
         private TreeNode invisibleRoot;
+        private TreeNode azureNode;
         private com.microsoft.azure.toolkit.ide.common.component.Node<?>[] modules; 
 
         @Override
@@ -119,7 +120,7 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
                 if (invisibleRoot == null) {
                     initialize();
                 }
-                return getServiceNodes();
+                return getChildren(invisibleRoot);
             }
             return getChildren(parent);
         }
@@ -134,7 +135,9 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
 
         @Override
 		public Object[] getChildren(Object parent) {
-			if (parent instanceof TreeNode) {
+			if (parent == azureNode) {
+				return getServiceNodes();
+			} else if (parent instanceof TreeNode) {
 				return ((TreeNode) parent).getChildNodes().toArray();
 			} else if (parent instanceof com.microsoft.azure.toolkit.ide.common.component.Node) {
 				return ((com.microsoft.azure.toolkit.ide.common.component.Node<?>) parent).getChildren().toArray();
@@ -163,7 +166,7 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
         }
         
         private Object[] getServiceNodes() {
-        	return ArrayUtils.concat(getChildren(invisibleRoot), modules);
+        	return ArrayUtils.concat(azureNode.getChildNodes().toArray(), modules);
         }
 
         private void initialize() {
@@ -171,7 +174,9 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
 
             setHDInsightRootModule(azureModule);
             invisibleRoot = new TreeNode(null);
-            invisibleRoot.add(createTreeNode(azureModule));
+            azureNode = createTreeNode(azureModule);
+            invisibleRoot.add(azureNode);
+            
             modules = AzureExplorer.getModules();
             azureModule.load(false);
         }
