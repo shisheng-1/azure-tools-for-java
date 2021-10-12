@@ -7,6 +7,7 @@ package com.microsoft.azure.toolkit.eclipse.common.action;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.Category;
@@ -21,19 +22,20 @@ import org.eclipse.core.runtime.Platform;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.commands.ICommandService;
 import org.eclipse.ui.handlers.IHandlerService;
-import org.eclipse.swt.widgets.Event;
 
 import com.microsoft.azure.toolkit.ide.common.IActionsContributor;
 import com.microsoft.azure.toolkit.lib.common.action.Action;
 import com.microsoft.azure.toolkit.lib.common.action.Action.Id;
 import com.microsoft.azure.toolkit.lib.common.action.ActionGroup;
 import com.microsoft.azure.toolkit.lib.common.action.AzureActionManager;
-import com.microsoft.azure.toolkit.lib.common.messager.AzureMessager;
+
 
 public class EclipseAzureActionManager extends AzureActionManager {
     private static final String ACTIONS_CATEGORY = "com.microsoft.azure.toolkit.actions.category";
     private static final String EXTENSION_POINT_ID = "com.microsoft.azure.toolkit.actions";
+    private static final String ACTION_ID_PREFIX = "com.microsoft.azure.toolkit.actions.";
     private static final Map<String, ActionGroup> groups = new HashMap<>();
+    private static final Map<String, Action<?>> actions = new HashMap<>();
     private static final ICommandService cmdService = (ICommandService) PlatformUI.getWorkbench().getService(ICommandService.class);
     private static final IHandlerService handlerService = (IHandlerService) PlatformUI.getWorkbench().getService(IHandlerService.class);
 
@@ -57,20 +59,22 @@ public class EclipseAzureActionManager extends AzureActionManager {
     }
     
     @Override
-    public <D> Action<D> getAction(Id<D> actionId) {
-        Command command = cmdService.getCommand(actionId.getId());
+    public <D> Action<D> getAction(Id<D> id) {
+    	final String actionId = ACTION_ID_PREFIX + id.getId();
+        Command command = cmdService.getCommand(actionId);
         if(!command.isDefined()) {
             return null;
-        } 
-        Event e = new Event();
-        return new Action<>((D d, ExecutionEvent event) -> {
-            try {
-                handlerService.executeCommand(actionId.getId(), null);
-            } catch (org.eclipse.core.commands.ExecutionException | NotDefinedException | NotEnabledException
-                    | NotHandledException error) {
-                error.printStackTrace();
-            }
-        }).authRequired(false);
+        }
+        return Optional.ofNullable((Action<D>)actions.get(actionId)).orElseGet(()->{
+            return new Action<>((D d, ExecutionEvent event) -> {
+                try {
+                    handlerService.executeCommand(actionId, null);
+                } catch (org.eclipse.core.commands.ExecutionException | NotDefinedException | NotEnabledException
+                        | NotHandledException error) {
+                    error.printStackTrace();
+                }
+            }).authRequired(false);
+        });
     }
 
     @Override
@@ -79,24 +83,23 @@ public class EclipseAzureActionManager extends AzureActionManager {
     }
 
     @Override
-    public <D> void registerAction(Id<D> actionId, Action<D> action) {
-        Command command = cmdService.getCommand(actionId.getId());
-        
-        if(!command.isDefined()) {
-            command.define(EXTENSION_POINT_ID, ACTIONS_CATEGORY, getActionCategory());
-            command.define(actionId.getId(), actionId.getId(), getActionCategory());
-            handlerService.activateHandler(actionId.getId() , new AbstractHandler() {
-                @Override
-                public Object execute(ExecutionEvent event) throws org.eclipse.core.commands.ExecutionException {
-                    action.handle((D)event.getObjectParameterForExecution(""), event);
-                    return null;
-                }
-                
-            });
-        }else {
-            AzureMessager.getMessager().warning("Command %s has been registered", actionId.getId());
-        }
-    }
+    public <D> void registerAction(Id<D> id, Action<D> action) {
+    	final String actionId = ACTION_ID_PREFIX + id.getId();
+        Command command = cmdService.getCommand(actionId);
+        if(command.isDefined()) {
+			command.undefine();
+		}
+		command.define(actionId, actionId, getActionCategory());
+		handlerService.activateHandler(actionId, new AbstractHandler() {
+			@Override
+			public Object execute(ExecutionEvent event) throws org.eclipse.core.commands.ExecutionException {
+				action.handle((D) event.getApplicationContext(), event);
+				return null;
+			}
+
+		});
+		actions.put(actionId, action);
+	}
 
     @Override
     public void registerGroup(String id, ActionGroup group) {

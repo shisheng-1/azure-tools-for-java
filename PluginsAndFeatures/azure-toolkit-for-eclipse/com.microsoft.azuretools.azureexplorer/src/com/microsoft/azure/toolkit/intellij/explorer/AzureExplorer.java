@@ -28,7 +28,7 @@ public class AzureExplorer {
 				return null;
 			}
 		}).filter(object -> object instanceof IExplorerContributor)
-				.map(object -> (IExplorerContributor) object)
+				.map(object -> ((IExplorerContributor) object).getModuleNode())
 				.toArray(Node<?>[]::new);
 	}
 }

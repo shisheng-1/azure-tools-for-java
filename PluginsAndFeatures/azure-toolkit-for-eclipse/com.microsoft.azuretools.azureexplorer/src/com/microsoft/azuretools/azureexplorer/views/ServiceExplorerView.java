@@ -11,7 +11,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuListener;
@@ -30,6 +34,7 @@ import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerSorter;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
@@ -44,7 +49,9 @@ import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
-
+import com.microsoft.azure.toolkit.lib.common.action.*;
+import com.microsoft.azure.toolkit.lib.common.view.IView;
+import com.microsoft.azure.toolkit.lib.common.view.IView.Label;
 import com.microsoft.azure.hdinsight.serverexplore.HDInsightRootModuleImpl;
 import com.microsoft.azure.toolkit.intellij.explorer.AzureExplorer;
 import com.microsoft.azuretools.authmanage.AuthMethodManager;
@@ -62,6 +69,9 @@ import com.microsoft.tooling.msservices.helpers.collections.ObservableList;
 import com.microsoft.tooling.msservices.serviceexplorer.Node;
 import com.microsoft.tooling.msservices.serviceexplorer.NodeAction;
 import com.microsoft.tooling.msservices.serviceexplorer.azure.AzureModule;
+import com.nimbusds.jose.util.ArrayUtils;
+
+import rx.functions.Actions;
 
 public class ServiceExplorerView extends ViewPart implements PropertyChangeListener {
 
@@ -93,6 +103,7 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
      */
     class ViewContentProvider implements IStructuredContentProvider, ITreeContentProvider {
         private TreeNode invisibleRoot;
+        private com.microsoft.azure.toolkit.ide.common.component.Node<?>[] modules; 
 
         @Override
         public void inputChanged(Viewer v, Object oldInput, Object newInput) {
@@ -108,7 +119,7 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
                 if (invisibleRoot == null) {
                     initialize();
                 }
-                return getChildren(invisibleRoot);
+                return getServiceNodes();
             }
             return getChildren(parent);
         }
@@ -122,18 +133,22 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
         }
 
         @Override
-        public Object[] getChildren(Object parent) {
-            if (parent instanceof TreeNode) {
-                return ((TreeNode) parent).getChildNodes().toArray();
-            }
-            return new Object[0];
-        }
+		public Object[] getChildren(Object parent) {
+			if (parent instanceof TreeNode) {
+				return ((TreeNode) parent).getChildNodes().toArray();
+			} else if (parent instanceof com.microsoft.azure.toolkit.ide.common.component.Node) {
+				return ((com.microsoft.azure.toolkit.ide.common.component.Node<?>) parent).getChildren().toArray();
+			}
+			return new Object[0];
+		}
 
-        @Override
-        public boolean hasChildren(Object parent) {
-            if (parent instanceof TreeNode) {
-                return ((TreeNode) parent).getChildNodes().size() > 0;
-            }
+		@Override
+		public boolean hasChildren(Object parent) {
+			if (parent instanceof TreeNode) {
+				return ((TreeNode) parent).getChildNodes().size() > 0;
+			} else if (parent instanceof com.microsoft.azure.toolkit.ide.common.component.Node) {
+				return ((com.microsoft.azure.toolkit.ide.common.component.Node<?>) parent).hasChildren();
+			}
             return false;
         }
 
@@ -146,6 +161,10 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
                     com.microsoft.azure.hdinsight.common.CommonConst.ENABLE_HDINSIGHT_NEW_SDK, "true");
 
         }
+        
+        private Object[] getServiceNodes() {
+        	return ArrayUtils.concat(getChildren(invisibleRoot), modules);
+        }
 
         private void initialize() {
             azureModule = new AzureModuleImpl();
@@ -153,10 +172,7 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
             setHDInsightRootModule(azureModule);
             invisibleRoot = new TreeNode(null);
             invisibleRoot.add(createTreeNode(azureModule));
-            com.microsoft.azure.toolkit.ide.common.component.Node<?>[] modules = AzureExplorer.getModules();
-            for(com.microsoft.azure.toolkit.ide.common.component.Node<?> node : modules) {
-            	System.out.println(node.view().getLabel());
-            }
+            modules = AzureExplorer.getModules();
             azureModule.load(false);
         }
     }
@@ -285,17 +301,22 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
 
         @Override
         public String getText(Object obj) {
+        	if(obj instanceof com.microsoft.azure.toolkit.ide.common.component.Node) {
+        		return ((com.microsoft.azure.toolkit.ide.common.component.Node<?>) obj).view().getLabel();
+        	}
             return obj.toString();
         }
 
         @Override
         public Image getImage(Object obj) {
+        	String iconPath = null; 
             if (obj instanceof TreeNode) {
-                String iconPath = ((TreeNode) obj).node.getIconPath();
-                if (iconPath != null) {
-                    return Optional.ofNullable(Activator.getImageDescriptor("icons/" + iconPath)).map(image -> image.createImage()).orElse(super.getImage(obj));
-                    // Activator.getDefault().getImageRegistry().get((((Node) obj).getIconPath()));
-                }
+                iconPath = StringUtils.isEmpty(((TreeNode) obj).node.getIconPath()) ? null : "icons/" + ((TreeNode) obj).node.getIconPath();
+            }else if(obj instanceof com.microsoft.azure.toolkit.ide.common.component.Node) {
+            	iconPath = ((com.microsoft.azure.toolkit.ide.common.component.Node<?>) obj).view().getIconPath();
+            }
+            if (StringUtils.isNotEmpty(iconPath)) {
+                return Optional.ofNullable(Activator.getImageDescriptor(iconPath)).map(image -> image.createImage()).orElse(super.getImage(obj));
             }
             return super.getImage(obj);
         }
@@ -342,26 +363,83 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
                 }
                 if (viewer.getSelection() instanceof IStructuredSelection) {
                     IStructuredSelection selection = (IStructuredSelection) viewer.getSelection();
-                    Node node = ((TreeNode) selection.getFirstElement()).node;
-                    if (node.hasNodeActions()) {
-                        for (final NodeAction nodeAction : node.getNodeActions()) {
-                            ImageDescriptor imageDescriptor = nodeAction.getIconPath() != null ?
-                                Activator.getImageDescriptor("icons/" + nodeAction.getIconPath()) : null;
-                            Action action = new Action(nodeAction.getName(), imageDescriptor) {
-                                @Override
-                                public void run() {
-                                    nodeAction.fireNodeActionEvent();
-                                }
-                            };
-                            action.setEnabled(nodeAction.isEnabled());
-                            manager.add(action);
+                    Object firstElement = selection.getFirstElement();
+                    if(firstElement instanceof TreeNode) {
+                    	Node node = ((TreeNode) selection.getFirstElement()).node;
+                        if (node.hasNodeActions()) {
+                            for (final NodeAction nodeAction : node.getNodeActions()) {
+                                ImageDescriptor imageDescriptor = nodeAction.getIconPath() != null ?
+                                    Activator.getImageDescriptor("icons/" + nodeAction.getIconPath()) : null;
+                                Action action = new Action(nodeAction.getName(), imageDescriptor) {
+                                    @Override
+                                    public void run() {
+                                        nodeAction.fireNodeActionEvent();
+                                    }
+                                };
+                                action.setEnabled(nodeAction.isEnabled());
+                                manager.add(action);
+                            }
                         }
+                    }else if(firstElement instanceof com.microsoft.azure.toolkit.ide.common.component.Node) {
+                    	com.microsoft.azure.toolkit.ide.common.component.Node<?> node = ((com.microsoft.azure.toolkit.ide.common.component.Node<?>) firstElement);
+                    	if(Objects.isNull(node.actions())) {
+                    		return;
+                    	}
+                    	applyActionGroupToMenu(node.actions(), manager, node.data());
                     }
                 }
             }
         });
         Menu menu = menuMgr.createContextMenu(viewer.getControl());
         viewer.getControl().setMenu(menu);
+    }
+    
+    public void applyActionGroupToMenu(@Nonnull ActionGroup actionGroup, @Nonnull IMenuManager manager, @Nullable Object source) {
+    	final AzureActionManager actionManager = AzureActionManager.getInstance();
+    	for (Object raw : actionGroup.actions()) {
+    		Action action = null;
+            if (raw instanceof com.microsoft.azure.toolkit.lib.common.action.Action.Id) {
+            	action = toEclipseAction(actionManager.getAction((com.microsoft.azure.toolkit.lib.common.action.Action.Id)raw), source);
+            }
+            if (raw instanceof String) {
+                final String actionId = (String) raw;
+                if (actionId.startsWith("-")) {
+                    final String title = actionId.replaceAll("-", "").trim();
+                    if (StringUtils.isBlank(title)) {
+                    	manager.add(new Separator());
+                    }else {
+                    	manager.add(new Separator(title));
+                    }
+                } else if (StringUtils.isNotBlank(actionId)) {
+                    action = toEclipseAction(actionManager.getAction(com.microsoft.azure.toolkit.lib.common.action.Action.Id.of(actionId)), source);
+                }
+            } else if (raw instanceof com.microsoft.azure.toolkit.lib.common.action.Action<?>) {
+            	action = toEclipseAction((com.microsoft.azure.toolkit.lib.common.action.Action)raw, source);
+            } else if (raw instanceof ActionGroup) {
+            	applyActionGroupToMenu((ActionGroup) raw, manager, source);
+            }
+            if(action != null) {
+            	manager.add(action);
+            }
+        }
+    }
+
+	private <T> Action toEclipseAction(com.microsoft.azure.toolkit.lib.common.action.Action<T> action,
+			@Nullable T source) {
+		final Label view = action.view(source);
+		final boolean visible = Objects.nonNull(view) && view.isEnabled()
+				&& Objects.nonNull(action.handler(null, source));
+		if (visible) {
+			final ImageDescriptor imageDescriptor = (view == null || StringUtils.isEmpty(view.getIconPath())) ? null
+					: Activator.getImageDescriptor(view.getIconPath());
+			return new Action(view.getLabel(), imageDescriptor) {
+				@Override
+				public void run() {
+					action.handle(source);
+				}
+			};
+		}
+		return null;
     }
 
     private void contributeToActionBars() {
@@ -467,11 +545,14 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
                     TreeItem[] selection = ((Tree) e.widget).getSelection();
                     if (selection.length > 0) {
                         TreeItem item = ((Tree) e.widget).getSelection()[0];
-                        Node node = ((TreeNode) item.getData()).node;
-                        // if the node in question is in a "loading" state then
-                        // we do not propagate the click event to it
-                        if (!node.isLoading()) {
-                            node.getClickAction().fireNodeActionEvent();
+                        Object data = item.getData();
+                        if(data instanceof Node) {
+                        	Node node = ((TreeNode) item.getData()).node;
+                            // if the node in question is in a "loading" state then
+                            // we do not propagate the click event to it
+                            if (!node.isLoading()) {
+                                node.getClickAction().fireNodeActionEvent();
+                            }	
                         }
                     }
                 }
@@ -485,11 +566,13 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
             public void keyReleased(KeyEvent event) {
                 if (event.keyCode == SWT.CR && tree.getSelectionCount() > 0) {
                     final TreeItem item = tree.getSelection()[0];
-                    Node node = ((TreeNode) item.getData()).node;
-                    // if the node in question is in a "loading" state then
-                    // we do not propagate the click event to it
-                    if (!node.isLoading()) {
-                        node.getClickAction().fireNodeActionEvent();
+                    if(item.getData() instanceof TreeNode) {
+                    	Node node = ((TreeNode) item.getData()).node;
+                        // if the node in question is in a "loading" state then
+                        // we do not propagate the click event to it
+                        if (!node.isLoading()) {
+                            node.getClickAction().fireNodeActionEvent();
+                        }
                     }
                 }
             }
