@@ -49,6 +49,7 @@ public class AzureComboBox<T> extends Composite implements AzureFormInput<T> {
     @Setter
     private Supplier<? extends List<? extends T>> itemsLoader;
     private AzureComboBoxViewer<T> viewer;
+    private Control extension;
 
     public AzureComboBox(Composite parent, boolean refresh) {
         this(parent, null, refresh);
@@ -73,13 +74,20 @@ public class AzureComboBox<T> extends Composite implements AzureFormInput<T> {
     }
 
     protected void init() {
-        final Control extension = this.getExtension();
+        this.viewer = new AzureComboBoxViewer<>(this);
+        this.extension = this.getExtension();
         final int columns = Objects.nonNull(extension) ? 2 : 1;
         this.setLayout(new GridLayout(columns, false));
-        this.viewer = new AzureComboBoxViewer<>(this);
-        Optional.ofNullable(extension).ifPresent(e -> e.setParent(this));
+        Optional.ofNullable(extension).ifPresent(e -> {
+            e.setParent(this);
+            final GridData grid = new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1);
+            grid.widthHint = 92;
+            grid.minimumWidth = 92;
+            e.setLayoutData(grid);
+            e.setSize(92, e.getSize().y);
+        });
         this.toggleLoadingSpinner(false);
-        this.viewer.getControl().setLayoutData(new GridData(GridData.FILL, GridData.CENTER));
+        this.viewer.getControl().setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
         this.viewer.setEditable(true);
         this.viewer.setContentProvider(ArrayContentProvider.getInstance());
         this.viewer.setLabelProvider(new LabelProvider() {
@@ -233,6 +241,7 @@ public class AzureComboBox<T> extends Composite implements AzureFormInput<T> {
 
     public void setEnabled(boolean b) {
         this.enabled = b;
+        Optional.ofNullable(this.extension).ifPresent(e -> e.setEnabled(b));
         this.viewer.setEnabled(b);
     }
 
