@@ -95,7 +95,7 @@ public class AzureComboBox<T> extends Composite implements AzureFormInput<T> {
         });
         this.viewer.addPostSelectionChangedListener((e) -> {
             if (!e.getSelection().isEmpty()) {
-                this.refreshValue();
+                this.setValue((T) ((StructuredSelection) e.getSelection()).getFirstElement());
             }
         });
     }
