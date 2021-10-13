@@ -15,21 +15,18 @@ import lombok.Setter;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.eclipse.jface.viewers.ArrayContentProvider;
-import org.eclipse.jface.viewers.ComboViewer;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -38,7 +35,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-public class AzureComboBox<T> extends ComboViewer implements AzureFormInput<T> {
+public class AzureComboBox<T> extends Composite implements AzureFormInput<T> {
+    public static final String EMPTY_ITEM = StringUtils.EMPTY;
     private static final int DEBOUNCE_DELAY = 500;
     private final TailingDebouncer refresher;
     @Getter
@@ -50,35 +48,41 @@ public class AzureComboBox<T> extends ComboViewer implements AzureFormInput<T> {
     @Getter
     @Setter
     private Supplier<? extends List<? extends T>> itemsLoader;
+    private AzureComboBoxViewer<T> viewer;
 
-    private AzureComboBox(Composite parent, int style, boolean refresh) {
-        super(parent, style);
+    public AzureComboBox(Composite parent, boolean refresh) {
+        this(parent, null, refresh);
+    }
+
+    public AzureComboBox(Composite parent) {
+        this(parent, null, true);
+    }
+
+    public AzureComboBox(Composite parent, @Nonnull Supplier<? extends List<? extends T>> itemsLoader) {
+        this(parent, itemsLoader, true);
+    }
+
+    public AzureComboBox(Composite parent, @Nullable Supplier<? extends List<? extends T>> itemsLoader, boolean refresh) {
+        super(parent, SWT.NONE);
         this.init();
+        this.itemsLoader = itemsLoader;
         this.refresher = new TailingDebouncer(this::doRefreshItems, DEBOUNCE_DELAY);
         if (refresh) {
             this.refreshItems();
         }
     }
 
-    public AzureComboBox(Composite parent) {
-        this(parent, SWT.DROP_DOWN, true);
-    }
-
-    public AzureComboBox(Composite parent, @Nonnull Supplier<? extends List<? extends T>> itemsLoader) {
-        this(parent, SWT.DROP_DOWN, true);
-        this.itemsLoader = itemsLoader;
-    }
-
-    public AzureComboBox(Composite parent, @Nonnull Supplier<? extends List<? extends T>> itemsLoader, boolean refresh) {
-        this(parent, SWT.DROP_DOWN, refresh);
-        this.itemsLoader = itemsLoader;
-    }
-
     protected void init() {
-        this.setEditable(true);
+        final Control extension = this.getExtension();
+        final int columns = Objects.nonNull(extension) ? 2 : 1;
+        this.setLayout(new GridLayout(columns, false));
+        this.viewer = new AzureComboBoxViewer<>(this);
+        Optional.ofNullable(extension).ifPresent(e -> e.setParent(this));
         this.toggleLoadingSpinner(false);
-        super.setContentProvider(ArrayContentProvider.getInstance());
-        super.setLabelProvider(new LabelProvider() {
+        this.viewer.getControl().setLayoutData(new GridData(GridData.FILL, GridData.CENTER));
+        this.viewer.setEditable(true);
+        this.viewer.setContentProvider(ArrayContentProvider.getInstance());
+        this.viewer.setLabelProvider(new LabelProvider() {
             @Override
             public Image getImage(Object element) {
                 return AzureComboBox.this.getItemIcon(element);
@@ -89,7 +93,7 @@ public class AzureComboBox<T> extends ComboViewer implements AzureFormInput<T> {
                 return AzureComboBox.this.getItemText(element);
             }
         });
-        this.addPostSelectionChangedListener((e) -> {
+        this.viewer.addPostSelectionChangedListener((e) -> {
             if (!e.getSelection().isEmpty()) {
                 this.refreshValue();
             }
@@ -98,7 +102,7 @@ public class AzureComboBox<T> extends ComboViewer implements AzureFormInput<T> {
 
     @Override
     public T getValue() {
-        return ((T) super.getStructuredSelection().getFirstElement());
+        return ((T) this.viewer.getStructuredSelection().getFirstElement());
     }
 
     @Override
@@ -116,11 +120,11 @@ public class AzureComboBox<T> extends ComboViewer implements AzureFormInput<T> {
         this.refreshValue();
     }
 
-    public void setValue(final ItemReference<T> val) {
+    public void setValue(final AzureComboBox.ItemReference<T> val) {
         this.setValue(val, null);
     }
 
-    public void setValue(final ItemReference<T> val, final Boolean fixed) {
+    public void setValue(final AzureComboBox.ItemReference<T> val, final Boolean fixed) {
         Optional.ofNullable(fixed).ifPresent(f -> {
             this.setEnabled(!f);
             this.setEditable(!f);
@@ -132,21 +136,21 @@ public class AzureComboBox<T> extends ComboViewer implements AzureFormInput<T> {
 
     private void refreshValue() {
         if (this.valueNotSet) {
-            if (super.listGetItemCount() > 0 && super.listGetSelectionIndices()[0] != 0) {
-                super.listSetSelection(new int[]{0});
+            if (this.viewer.getItemCount() > 0 && this.viewer.getSelectedIndex() != 0) {
+                this.viewer.setSelectedIndex(0);
             }
         } else {
-            final Object selected = super.getStructuredSelection().getFirstElement();
-            if (Objects.equals(selected, this.value) || (this.value instanceof ItemReference && ((ItemReference<?>) this.value).is(selected))) {
+            final Object selected = this.viewer.getSelectedItem();
+            if (Objects.equals(selected, this.value) || (this.value instanceof AzureComboBox.ItemReference && ((AzureComboBox.ItemReference<?>) this.value).is(selected))) {
                 return;
             }
             final List<T> items = this.getItems();
             if (this.value instanceof AzureComboBox.ItemReference) {
-                items.stream().filter(i -> ((ItemReference<?>) this.value).is(i)).findFirst().ifPresent(this::setValue);
+                items.stream().filter(i -> ((AzureComboBox.ItemReference<?>) this.value).is(i)).findFirst().ifPresent(this::setValue);
             } else if (items.contains(this.value)) {
-                super.setSelection(new StructuredSelection(this.value));
+                this.viewer.setSelectedItem(this.value);
             } else {
-                super.setSelection(StructuredSelection.EMPTY);
+                this.viewer.setSelectedItem(null);
             }
         }
     }
@@ -164,80 +168,6 @@ public class AzureComboBox<T> extends ComboViewer implements AzureFormInput<T> {
         this.setLoading(true);
         this.setItems(this.loadItemsInner());
         this.setLoading(false);
-    }
-
-    public List<T> getItems() {
-        final List<T> result = new ArrayList<>();
-        final Object input = super.getInput();
-        if (input instanceof Collection) {
-            result.addAll((Collection<T>) input);
-        }
-        return result;
-    }
-
-    protected synchronized void setItems(final List<? extends T> items) {
-        AzureTaskManager.getInstance().runLater(() -> {
-            super.setInput(items);
-            this.refreshValue();
-        });
-    }
-
-    public void clear() {
-        this.value = null;
-        this.valueNotSet = true;
-        this.setInput(Collections.emptyList());
-        this.refreshValue();
-    }
-
-    protected void setLoading(final boolean loading) {
-        AzureTaskManager.getInstance().runLater(() -> {
-            if (loading) {
-                super.getControl().setEnabled(false);
-                this.toggleLoadingSpinner(true);
-            } else {
-                super.getControl().setEnabled(this.enabled);
-                this.toggleLoadingSpinner(false);
-            }
-            this.getControl().redraw();
-        });
-    }
-
-    private void toggleLoadingSpinner(boolean b) {
-
-    }
-
-    private void setEditable(boolean b) {
-
-    }
-
-    public void setEnabled(boolean b) {
-        this.enabled = b;
-        super.getControl().setEnabled(b);
-    }
-
-    public boolean isEnabled() {
-        return this.enabled || super.getControl().isEnabled();
-    }
-
-    protected String getItemText(Object item) {
-        if (item == null) {
-            return StringUtils.EMPTY;
-        }
-        return item.toString();
-    }
-
-    @Nullable
-    protected Image getItemIcon(Object item) {
-        return null;
-    }
-
-    @Nullable
-    protected Control getExtension() {
-        return null;
-    }
-
-    protected Mono<? extends List<? extends T>> loadItemsAsync() {
-        return Mono.fromCallable(this::loadItemsInner).subscribeOn(Schedulers.boundedElastic());
     }
 
     protected final List<? extends T> loadItemsInner() {
@@ -258,12 +188,72 @@ public class AzureComboBox<T> extends ComboViewer implements AzureFormInput<T> {
     }
 
     @Nonnull
-    protected List<? extends T> loadItems() {
+    protected List<? extends T> loadItems() throws Exception {
         return Collections.emptyList();
     }
 
+    public List<T> getItems() {
+        return this.viewer.getItems();
+    }
+
+    protected synchronized void setItems(final List<? extends T> items) {
+        AzureTaskManager.getInstance().runLater(() -> {
+            this.viewer.setItems(items);
+            this.refreshValue();
+        });
+    }
+
+    public void clear() {
+        this.value = null;
+        this.valueNotSet = true;
+        this.viewer.removeAllItems();
+        this.refreshValue();
+    }
+
+    protected void setLoading(final boolean loading) {
+        AzureTaskManager.getInstance().runLater(() -> {
+            if (loading) {
+                this.viewer.setEnabled(false);
+                this.toggleLoadingSpinner(true);
+            } else {
+                this.viewer.setEnabled(this.enabled);
+                this.toggleLoadingSpinner(false);
+            }
+            this.viewer.repaint();
+        });
+    }
+
+    private void toggleLoadingSpinner(boolean b) {
+
+    }
+
+    private void setEditable(boolean b) {
+        this.viewer.setEditable(b);
+    }
+
+    public void setEnabled(boolean b) {
+        this.enabled = b;
+        this.viewer.setEnabled(b);
+    }
+
+    public boolean isEnabled() {
+        return this.enabled || this.viewer.isEnabled();
+    }
+
+    protected String getItemText(Object item) {
+        if (item == null) {
+            return StringUtils.EMPTY;
+        }
+        return item.toString();
+    }
+
     @Nullable
-    protected T getDefaultValue() {
+    protected Image getItemIcon(Object item) {
+        return null;
+    }
+
+    @Nullable
+    protected Control getExtension() {
         return null;
     }
 
