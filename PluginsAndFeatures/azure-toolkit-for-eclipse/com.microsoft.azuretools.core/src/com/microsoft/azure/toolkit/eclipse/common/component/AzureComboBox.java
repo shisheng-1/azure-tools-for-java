@@ -143,6 +143,9 @@ public class AzureComboBox<T> extends Composite implements AzureFormInput<T> {
     }
 
     private void refreshValue() {
+        if (this.isDisposed()) {
+            return;
+        }
         if (this.valueNotSet) {
             if (this.viewer.getItemCount() > 0 && this.viewer.getSelectedIndex() != 0) {
                 this.viewer.setSelectedIndex(0);
@@ -206,6 +209,9 @@ public class AzureComboBox<T> extends Composite implements AzureFormInput<T> {
 
     protected synchronized void setItems(final List<? extends T> items) {
         AzureTaskManager.getInstance().runLater(() -> {
+            if (this.isDisposed()) {
+                return;
+            }
             this.viewer.setItems(items);
             this.refreshValue();
         });
@@ -220,6 +226,9 @@ public class AzureComboBox<T> extends Composite implements AzureFormInput<T> {
 
     protected void setLoading(final boolean loading) {
         AzureTaskManager.getInstance().runLater(() -> {
+            if (this.isDisposed()) {
+                return;
+            }
             if (loading) {
                 this.viewer.setEnabled(false);
                 this.toggleLoadingSpinner(true);
