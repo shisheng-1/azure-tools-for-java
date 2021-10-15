@@ -23,6 +23,7 @@ import org.eclipse.jface.viewers.TreeViewer;
 
 import com.microsoft.azure.toolkit.lib.common.action.ActionGroup;
 import com.microsoft.azure.toolkit.lib.common.action.AzureActionManager;
+import com.microsoft.azure.toolkit.lib.common.messager.AzureMessager;
 import com.microsoft.azure.toolkit.lib.common.task.AzureTaskManager;
 import com.microsoft.azure.toolkit.lib.common.view.IView.Label;
 import com.microsoft.azuretools.azureexplorer.Activator;
@@ -58,18 +59,18 @@ public class AzureTreeNode implements com.microsoft.azure.toolkit.ide.common.com
         if (loaded != null) {
             return; // return if loading/loaded
         }
-        this.loaded = Boolean.FALSE;
-        AzureTaskManager.getInstance().runOnPooledThread(() -> {
-            try {
-                childs = AzureTreeNode.this.node.getChildren().stream()
-                        .map(node -> new AzureTreeNode(treeView, this, node)).collect(Collectors.toList());
-                AzureTaskManager.getInstance().runLater(() -> refreshView());
-            } catch (Exception e) {
-                childs = Collections.emptyList();
-            } finally {
-                loaded = true;
-            }
-        });
+		this.loaded = Boolean.FALSE;
+		AzureTaskManager.getInstance().runOnPooledThread(() -> {
+			try {
+				childs = AzureTreeNode.this.node.getChildren().stream()
+						.map(node -> new AzureTreeNode(treeView, this, node)).collect(Collectors.toList());
+			} catch (Exception e) {
+				childs = Collections.emptyList();
+			} finally {
+				loaded = true;
+				AzureTaskManager.getInstance().runLater(() -> refreshView());
+			}
+		});
     }
 
     public boolean hasChildren() {
@@ -147,10 +148,10 @@ public class AzureTreeNode implements com.microsoft.azure.toolkit.ide.common.com
 
     private <T> Action toEclipseAction(com.microsoft.azure.toolkit.lib.common.action.Action<T> action,
             @Nullable T source) {
-        final Label view = action.view(source);
-        if (view == null) {
-            return null;
-        }
+		final Label view = Optional.ofNullable(action).map(act -> act.view(source)).orElse(null);
+		if (view == null) {
+			return null;
+		}
         final String iconPath = Optional.ofNullable(view.getIconPath())
                 .map(path -> StringUtils.replace(path, ".svg", ".png")).orElse(null);
         final ImageDescriptor imageDescriptor = StringUtils.isEmpty(iconPath) ? null
