@@ -8,7 +8,6 @@ package com.microsoft.azure.toolkit.eclipse.common.component;
 import org.eclipse.jface.viewers.ComboViewer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.StructuredSelection;
-import org.eclipse.swt.widgets.Composite;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -60,7 +59,7 @@ public class AzureComboBoxViewer<T> extends ComboViewer {
     }
 
     public void setSelectedIndex(int i) {
-        super.listSetSelection(new int[] { i } );
+        super.listSetSelection(new int[]{i});
     }
 
     public Object getSelectedItem() {

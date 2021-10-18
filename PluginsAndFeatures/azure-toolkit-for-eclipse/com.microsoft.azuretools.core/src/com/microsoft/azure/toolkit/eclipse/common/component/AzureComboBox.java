@@ -5,7 +5,6 @@
 
 package com.microsoft.azure.toolkit.eclipse.common.component;
 
-import com.microsoft.azure.toolkit.lib.common.form.AzureFormInput;
 import com.microsoft.azure.toolkit.lib.common.messager.AzureMessager;
 import com.microsoft.azure.toolkit.lib.common.operation.AzureOperation;
 import com.microsoft.azure.toolkit.lib.common.task.AzureTaskManager;
@@ -33,7 +32,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-public class AzureComboBox<T> extends Composite implements AzureFormInput<T> {
+public class AzureComboBox<T> extends Composite implements AzureFormInputControl<T> {
     public static final String EMPTY_ITEM = StringUtils.EMPTY;
     private static final int DEBOUNCE_DELAY = 500;
     private final TailingDebouncer refresher;
@@ -294,6 +293,11 @@ public class AzureComboBox<T> extends Composite implements AzureFormInput<T> {
 
     public String getLabel() {
         return this.getClass().getSimpleName();
+    }
+
+    @Override
+    public Control getInputControl() {
+        return this.viewer.getControl();
     }
 
     public static class ItemReference<T> {
