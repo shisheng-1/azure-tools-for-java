@@ -65,6 +65,7 @@ public class AzureTreeNode implements com.microsoft.azure.toolkit.ide.common.com
 				childs = AzureTreeNode.this.node.getChildren().stream()
 						.map(node -> new AzureTreeNode(treeView, this, node)).collect(Collectors.toList());
 			} catch (Exception e) {
+				e.printStackTrace();
 				childs = Collections.emptyList();
 			} finally {
 				loaded = true;
@@ -110,7 +111,7 @@ public class AzureTreeNode implements com.microsoft.azure.toolkit.ide.common.com
     }
 
     public void installActionsMenu(@Nonnull IMenuManager manager) {
-        applyActionGroupToMenu(node.actions(), manager, node.data());
+    	Optional.ofNullable(node.actions()).ifPresent(group -> applyActionGroupToMenu(node.actions(), manager, node.data()));
     }
 
     private void applyActionGroupToMenu(@Nonnull ActionGroup actionGroup, @Nonnull IMenuManager manager,

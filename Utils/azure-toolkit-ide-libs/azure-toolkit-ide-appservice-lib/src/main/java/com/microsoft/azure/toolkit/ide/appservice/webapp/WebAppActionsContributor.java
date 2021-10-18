@@ -13,9 +13,13 @@ import com.microsoft.azure.toolkit.lib.common.action.Action;
 import com.microsoft.azure.toolkit.lib.common.action.ActionGroup;
 import com.microsoft.azure.toolkit.lib.common.action.ActionView;
 import com.microsoft.azure.toolkit.lib.common.action.AzureActionManager;
+import com.microsoft.azure.toolkit.lib.common.entity.IAzureBaseResource;
 import com.microsoft.azure.toolkit.lib.common.event.AzureEventBus;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Optional;
+import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 
 import static com.microsoft.azure.toolkit.lib.common.operation.AzureOperationBundle.title;
@@ -76,5 +80,23 @@ public class WebAppActionsContributor implements IActionsContributor {
                 .title(s -> Optional.ofNullable(s).map(r -> title("appservice|webapp.slot.refresh", ((AppServiceFile) r).getName())).orElse(null))
                 .enabled(s -> s instanceof IWebApp);
         am.registerAction(REFRESH_DEPLOYMENT_SLOTS, new Action<>(refresh, refreshView));
+    }
+
+    @Override
+    public void registerHandlers(AzureActionManager am) {
+        final BiPredicate<IAzureBaseResource<?, ?>, AnActionEvent> startCondition = (r, e) -> r instanceof VirtualMachine &&
+                StringUtils.equals(r.status(), IAzureBaseResource.Status.STOPPED);
+        final BiConsumer<IAzureBaseResource<?, ?>, AnActionEvent> startHandler = (c, e) -> ((VirtualMachine) c).start();
+        am.registerHandler(ResourceCommonActionsContributor.START, startCondition, startHandler);
+
+        final BiPredicate<IAzureBaseResource<?, ?>, AnActionEvent> stopCondition = (r, e) -> r instanceof VirtualMachine &&
+                StringUtils.equals(r.status(), IAzureBaseResource.Status.RUNNING);
+        final BiConsumer<IAzureBaseResource<?, ?>, AnActionEvent> stopHandler = (c, e) -> ((VirtualMachine) c).stop();
+        am.registerHandler(ResourceCommonActionsContributor.STOP, stopCondition, stopHandler);
+
+        final BiPredicate<IAzureBaseResource<?, ?>, AnActionEvent> restartCondition = (r, e) -> r instanceof VirtualMachine &&
+                StringUtils.equals(r.status(), IAzureBaseResource.Status.RUNNING);
+        final BiConsumer<IAzureBaseResource<?, ?>, AnActionEvent> restartHandler = (c, e) -> ((VirtualMachine) c).restart();
+        am.registerHandler(ResourceCommonActionsContributor.RESTART, restartCondition, restartHandler);
     }
 }

@@ -25,6 +25,7 @@ public class WebAppDeploymentSlotsNode extends Node<IWebApp> {
         super(data);
         this.webApp = data;
         this.nodeView = new WebAppDeploymentSlotsNodeView(data);
+        this.actions(WebAppActionsContributor.DEPLOYMENT_SLOTS_ACTIONS);
     }
 
     @Nonnull
