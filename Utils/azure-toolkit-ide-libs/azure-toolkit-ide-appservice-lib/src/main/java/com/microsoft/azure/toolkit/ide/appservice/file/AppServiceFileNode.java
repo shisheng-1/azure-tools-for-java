@@ -89,7 +89,7 @@ public class AppServiceFileNode extends Node<AppServiceFile> {
         public AppServiceFileLabelView(@Nonnull AppServiceFile file) {
             this.file = file;
             this.listener = new AzureEventBus.EventListener<>(this::onEvent);
-            AzureEventBus.on("common|service.refresh", listener);
+            AzureEventBus.on("common|resource.refresh", listener);
             this.refreshView();
         }
 
@@ -123,7 +123,7 @@ public class AppServiceFileNode extends Node<AppServiceFile> {
 
         @Override
         public void dispose() {
-            AzureEventBus.off("common|service.refresh", listener);
+            AzureEventBus.off("common|resource.refresh", listener);
             this.refresher = null;
         }
     }
