@@ -36,7 +36,7 @@ public class SubscriptionAndResourceGroupComposite extends Composite {
         cbResourceGroup = new ResourceGroupComboBox(this);
         cbResourceGroup.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 
-        cbSubs.addPostSelectionChangedListener(event -> {
+        cbSubs.addValueChangedListener(event -> {
             cbResourceGroup.setSubscription(cbSubs.getValue());
         });
     }
