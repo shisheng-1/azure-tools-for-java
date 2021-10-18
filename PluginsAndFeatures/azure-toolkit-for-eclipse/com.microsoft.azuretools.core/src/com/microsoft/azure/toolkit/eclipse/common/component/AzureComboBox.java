@@ -14,9 +14,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.eclipse.jface.viewers.ArrayContentProvider;
-import org.eclipse.jface.viewers.LabelProvider;
-import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.jface.viewers.*;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
@@ -71,6 +69,11 @@ public class AzureComboBox<T> extends Composite implements AzureFormInput<T> {
         if (refresh) {
             this.refreshItems();
         }
+        GridLayout gridLayout = (GridLayout) getLayout();
+        gridLayout.marginHeight = 0;
+        gridLayout.horizontalSpacing = 0;
+        gridLayout.verticalSpacing = 0;
+        gridLayout.marginWidth = 0;
     }
 
     protected void init() {
@@ -107,6 +110,11 @@ public class AzureComboBox<T> extends Composite implements AzureFormInput<T> {
             }
         });
     }
+
+    public void addPostSelectionChangedListener(ISelectionChangedListener listener) {
+        this.viewer.addPostSelectionChangedListener(listener);
+    }
+
 
     @Override
     public T getValue() {
@@ -148,7 +156,7 @@ public class AzureComboBox<T> extends Composite implements AzureFormInput<T> {
         }
         if (this.valueNotSet) {
             if (this.viewer.getItemCount() > 0 && this.viewer.getSelectedIndex() != 0) {
-                this.viewer.setSelectedIndex(0);
+                this.viewer.setSelectedItem(this.viewer.getItems().get(0));
             }
         } else {
             final Object selected = this.viewer.getSelectedItem();

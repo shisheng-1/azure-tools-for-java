@@ -38,10 +38,16 @@ public class AzureComboBoxViewer<T> extends ComboViewer {
     }
 
     public void setItems(List<? extends T> items) {
+        if (this.getControl().isDisposed()) {
+            return;
+        }
         super.setInput(items);
     }
 
     public void removeAllItems() {
+        if (this.getControl().isDisposed()) {
+            return;
+        }
         super.setInput(Collections.emptyList());
     }
 
@@ -54,7 +60,7 @@ public class AzureComboBoxViewer<T> extends ComboViewer {
     }
 
     public void setSelectedIndex(int i) {
-        super.listSetSelection(new int[i]);
+        super.listSetSelection(new int[] { i } );
     }
 
     public Object getSelectedItem() {
@@ -70,10 +76,16 @@ public class AzureComboBoxViewer<T> extends ComboViewer {
     }
 
     public void setEditable(boolean b) {
+        if (this.getControl().isDisposed()) {
+            return;
+        }
         super.getControl().setEnabled(b);
     }
 
     public void setEnabled(boolean b) {
+        if (this.getControl().isDisposed()) {
+            return;
+        }
         super.getControl().setEnabled(b);
     }
 

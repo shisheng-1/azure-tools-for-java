@@ -11,6 +11,7 @@ import com.microsoft.azure.toolkit.lib.common.operation.AzureOperation;
 import org.eclipse.swt.widgets.Composite;
 
 import javax.annotation.Nonnull;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -20,8 +21,6 @@ public class SubscriptionComboBox extends AzureComboBox<Subscription> {
 
     public SubscriptionComboBox(Composite parent) {
         super(parent);
-        final List<Subscription> items = az(AzureAccount.class).account().getSelectedSubscriptions();
-        this.setValue(items.get(0)); // select the first subscription
     }
 
     @Nonnull
@@ -30,8 +29,12 @@ public class SubscriptionComboBox extends AzureComboBox<Subscription> {
             name = "account|subscription.list.selected",
             type = AzureOperation.Type.SERVICE
     )
-    protected List<Subscription> loadItems() {
-        return az(AzureAccount.class).account().getSelectedSubscriptions();
+    protected List<Subscription> loadItems()  {
+        try {
+            return az(AzureAccount.class).account().getSelectedSubscriptions();
+        } catch (Exception ex) {
+            return Collections.emptyList();
+        }
     }
 
     @Override
