@@ -15,6 +15,7 @@ import com.microsoft.azure.toolkit.lib.common.task.AzureTaskManager;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nonnull;
@@ -72,7 +73,12 @@ public class AppServiceFileNode extends Node<AppServiceFile> {
     @Override
     public List<Node<?>> getChildren() {
         return file.getType() != AppServiceFile.Type.DIRECTORY ? Collections.emptyList() :
-                appService.getFilesInDirectory(file.getPath()).stream().map(AppServiceFileNode::new).collect(Collectors.toList());
+                appService.getFilesInDirectory(file.getPath()).stream()
+                        .sorted((first, second) -> first.getType() == second.getType() ?
+                                StringUtils.compare(first.getName(), second.getName()) :
+                                first.getType() == AppServiceFile.Type.DIRECTORY ? -1 : 1)
+                        .map(AppServiceFileNode::new)
+                        .collect(Collectors.toList());
     }
 
     static class AppServiceFileLabelView implements NodeView {
@@ -97,10 +103,7 @@ public class AppServiceFileNode extends Node<AppServiceFile> {
             final String type = event.getType();
             final Object source = event.getSource();
             if (source instanceof AppServiceFile && StringUtils.equalsIgnoreCase(((AppServiceFile) source).getFullName(), this.file.getFullName())) {
-                final AzureTaskManager tm = AzureTaskManager.getInstance();
-                if ("common|resource.refresh".equals(type)) {
-                    tm.runLater(this::refreshChildren);
-                }
+                AzureTaskManager.getInstance().runLater(this::refreshChildren);
             }
         }
 
@@ -111,7 +114,7 @@ public class AppServiceFileNode extends Node<AppServiceFile> {
 
         @Override
         public String getIconPath() {
-            return null;
+            return file.getType() == AppServiceFile.Type.DIRECTORY ? "/icons/storagefolder.png" : String.format("file-%s", FilenameUtils.getExtension(file.getName()));
         }
 
         @Override

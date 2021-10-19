@@ -75,6 +75,9 @@
       <actionContributor
             implementation="com.microsoft.azure.toolkit.ide.appservice.webapp.WebAppActionsContributor">
       </actionContributor>
+      <actionContributor
+            implementation="com.microsoft.azure.toolkit.intellij.webapp.EclipseWebAppActionsContributor">
+      </actionContributor>
    </extension>
 
 </plugin>

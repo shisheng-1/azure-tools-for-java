@@ -48,4 +48,8 @@ public class AppServiceFileActionsContributor implements IActionsContributor {
                 .enabled(s -> s instanceof AppServiceFile);
         am.registerAction(APP_SERVICE_DIRECTORY_REFRESH, new Action<>(refresh, refreshView));
     }
+
+    public int getOrder() {
+        return 1; //after azure resource common actions registered
+    }
 }

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See License.txt in the project root for license information.
+ */
+
 package com.microsoft.azure.toolkit.ide.appservice.webapp.node;
 
 import com.microsoft.azure.toolkit.ide.appservice.webapp.WebAppActionsContributor;
@@ -14,8 +19,6 @@ import lombok.Setter;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.List;
-import java.util.stream.Collectors;
 
 public class WebAppDeploymentSlotsNode extends Node<IWebApp> {
     private IWebApp webApp;
@@ -26,19 +29,14 @@ public class WebAppDeploymentSlotsNode extends Node<IWebApp> {
         this.webApp = data;
         this.nodeView = new WebAppDeploymentSlotsNodeView(data);
         this.actions(WebAppActionsContributor.DEPLOYMENT_SLOTS_ACTIONS);
+        this.addChildren(ignore -> webApp.deploymentSlots(), (slot, slotsNode) ->
+                new Node<>(slot).view(new AzureResourceLabelView<>(slot)).actions(WebAppActionsContributor.DEPLOYMENT_SLOT_ACTIONS));
     }
 
     @Nonnull
     @Override
     public NodeView view() {
         return this.nodeView;
-    }
-
-    @Override
-    public List<Node<?>> getChildren() {
-        return webApp.deploymentSlots().stream()
-                .map(slot -> new Node<>(slot).view(new AzureResourceLabelView<>(slot)).actions(WebAppActionsContributor.DEPLOYMENT_SLOT_ACTIONS))
-                .collect(Collectors.toList());
     }
 
     static class WebAppDeploymentSlotsNodeView implements NodeView {
@@ -67,7 +65,7 @@ public class WebAppDeploymentSlotsNode extends Node<IWebApp> {
 
         @Override
         public String getIconPath() {
-            return "/icons/Slot_16.png";
+            return "/icons/webappdeploymentslot.png";
         }
 
         @Override
@@ -85,10 +83,7 @@ public class WebAppDeploymentSlotsNode extends Node<IWebApp> {
             final String type = event.getType();
             final Object source = event.getSource();
             if (source instanceof IAzureBaseResource && ((IAzureBaseResource<?, ?>) source).id().equals(this.webApp.id())) {
-                final AzureTaskManager tm = AzureTaskManager.getInstance();
-                if ("appservice|webapp.slot.refresh".equals(type)) {
-                    tm.runLater(this::refreshChildren);
-                }
+                AzureTaskManager.getInstance().runLater(this::refreshChildren);
             }
         }
     }

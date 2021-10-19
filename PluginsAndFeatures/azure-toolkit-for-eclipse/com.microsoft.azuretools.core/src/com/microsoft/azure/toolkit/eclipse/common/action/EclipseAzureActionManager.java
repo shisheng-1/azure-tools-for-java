@@ -5,6 +5,9 @@
 
 package com.microsoft.azure.toolkit.eclipse.common.action;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -39,24 +42,26 @@ public class EclipseAzureActionManager extends AzureActionManager {
     private static final ICommandService cmdService = (ICommandService) PlatformUI.getWorkbench().getService(ICommandService.class);
     private static final IHandlerService handlerService = (IHandlerService) PlatformUI.getWorkbench().getService(IHandlerService.class);
 
-    public static void register() {
-        final EclipseAzureActionManager am = new EclipseAzureActionManager();
-        register(am);
-        IConfigurationElement[] configurationElements = Platform.getExtensionRegistry()
-                .getConfigurationElementsFor(EXTENSION_POINT_ID);
-        for (IConfigurationElement element : configurationElements) {
-            try {
-                Object extension = element.createExecutableExtension("implementation");
-                if (extension instanceof IActionsContributor) {
-                    ((IActionsContributor) extension).registerActions(am);
-                    ((IActionsContributor) extension).registerHandlers(am);
-                    ((IActionsContributor) extension).registerGroups(am);
-                }
-            } catch (CoreException e) {
-                // swallow exception during register
-            }
-        }
-    }
+	public static void register() {
+		final EclipseAzureActionManager am = new EclipseAzureActionManager();
+		register(am);
+		IConfigurationElement[] configurationElements = Platform.getExtensionRegistry()
+				.getConfigurationElementsFor(EXTENSION_POINT_ID);
+		Arrays.stream(configurationElements).map(element -> {
+			try {
+				return element.createExecutableExtension("implementation");
+			} catch (CoreException e1) {
+				// swallow exception during register
+				return null;
+			}
+		}).filter(ext -> ext instanceof IActionsContributor).map(ext -> (IActionsContributor) ext)
+				.sorted(Comparator.comparing(IActionsContributor::getOrder))
+				.forEachOrdered(contributor -> {
+					contributor.registerActions(am);
+					contributor.registerHandlers(am);
+					contributor.registerGroups(am);
+				});
+	}
     
     @Override
     public <D> Action<D> getAction(Id<D> id) {

@@ -48,8 +48,9 @@ import org.eclipse.ui.part.ViewPart;
 
 import com.microsoft.azure.hdinsight.common.IconPathBuilder;
 import com.microsoft.azure.hdinsight.serverexplore.HDInsightRootModuleImpl;
-import com.microsoft.azure.toolkit.intellij.explorer.AzureExplorer;
-import com.microsoft.azure.toolkit.intellij.explorer.AzureTreeNode;
+import com.microsoft.azure.toolkit.eclipse.common.AzureIcons;
+import com.microsoft.azure.toolkit.eclipse.explorer.AzureExplorer;
+import com.microsoft.azure.toolkit.eclipse.explorer.AzureTreeNode;
 import com.microsoft.azuretools.authmanage.AuthMethodManager;
 import com.microsoft.azuretools.azurecommons.helpers.NotNull;
 import com.microsoft.azuretools.azureexplorer.Activator;
@@ -322,13 +323,12 @@ public class ServiceExplorerView extends ViewPart implements PropertyChangeListe
             if (obj instanceof TreeNode) {
                 final Node node = ((TreeNode) obj).node;
                 iconPath = Optional.ofNullable(node.getIconPath()).map(path -> "icons/" + path)
-                        .orElseGet(() -> Optional.ofNullable(node.getIconSymbol().getPath())
-                                .map(value -> StringUtils.replace(value, ".svg", ".png")).orElse(null));
+                        .orElseGet(() -> Optional.ofNullable(node.getIconSymbol().getPath()).orElse(null));
             } else if (obj instanceof AzureTreeNode) {
                 iconPath =  ((AzureTreeNode) obj).getIconPath();
             }
             if (StringUtils.isNotEmpty(iconPath)) {
-                return Optional.ofNullable(Activator.getImageDescriptor(iconPath)).map(image -> image.createImage()).orElse(super.getImage(obj));
+                return Optional.ofNullable(AzureIcons.getIcon(iconPath)).map(image -> image.createImage()).orElse(super.getImage(obj));
             }
             return super.getImage(obj);
         }
