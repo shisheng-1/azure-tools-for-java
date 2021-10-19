@@ -16,6 +16,7 @@ import java.util.Iterator;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import com.microsoft.azure.toolkit.lib.common.messager.AzureMessager;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
@@ -68,6 +69,8 @@ import org.osgi.framework.Version;
 import org.osgi.service.prefs.Preferences;
 
 import com.microsoft.azuretools.core.Activator;
+
+import javax.annotation.Nonnull;
 
 
 public class PluginUtil {
@@ -557,6 +560,14 @@ public class PluginUtil {
         }
 
         return true;
+    }
+
+    public static void openLinkInBrowser(@Nonnull String url) {
+        try {
+            PlatformUI.getWorkbench().getBrowserSupport().getExternalBrowser().openURL(new URL(url));
+        } catch (Exception ex) {
+            AzureMessager.getMessager().error(ex, "Unexpected exception: " + ex.getMessage());
+        }
     }
 
     private static void forceInstallPluginUsingP2(String pluginGroupID) {
