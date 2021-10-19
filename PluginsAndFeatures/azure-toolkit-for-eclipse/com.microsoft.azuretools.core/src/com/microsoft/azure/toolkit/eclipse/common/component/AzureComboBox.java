@@ -13,7 +13,9 @@ import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.eclipse.jface.viewers.*;
+import org.eclipse.jface.viewers.ArrayContentProvider;
+import org.eclipse.jface.viewers.ISelectionChangedListener;
+import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
@@ -36,9 +38,6 @@ public class AzureComboBox<T> extends Composite implements AzureFormInputControl
     public static final String EMPTY_ITEM = StringUtils.EMPTY;
     private static final int DEBOUNCE_DELAY = 500;
     private final TailingDebouncer refresher;
-    @Getter
-    @Setter
-    private boolean required;
     private Object value;
     private boolean valueNotSet = true;
     protected boolean enabled = true;
@@ -105,7 +104,7 @@ public class AzureComboBox<T> extends Composite implements AzureFormInputControl
         });
         this.viewer.addPostSelectionChangedListener((e) -> {
             if (!e.getSelection().isEmpty()) {
-                this.setValue((T) ((StructuredSelection) e.getSelection()).getFirstElement());
+                this.refreshValue();
             }
         });
     }
@@ -130,8 +129,12 @@ public class AzureComboBox<T> extends Composite implements AzureFormInputControl
             this.setEditable(!f);
         });
         this.valueNotSet = false;
+        Object oldVal = this.value;
         this.value = val;
         this.refreshValue();
+        if (!Objects.equals(oldVal, val)) {
+            fireValueChangedEvent(val);
+        }
     }
 
     public void setValue(final AzureComboBox.ItemReference<T> val) {
@@ -154,7 +157,7 @@ public class AzureComboBox<T> extends Composite implements AzureFormInputControl
         }
         if (this.valueNotSet) {
             if (this.viewer.getItemCount() > 0 && this.viewer.getSelectedIndex() != 0) {
-                this.viewer.setSelectedItem(this.viewer.getItems().get(0));
+                this.viewer.setSelectedIndex(0);
             }
         } else {
             final Object selected = this.viewer.getSelectedItem();

@@ -5,27 +5,43 @@
 
 package com.microsoft.azure.toolkit.eclipse.common.component;
 
-import com.microsoft.azure.toolkit.lib.common.form.Validatable;
-import lombok.Getter;
-import lombok.Setter;
+import com.microsoft.azure.toolkit.lib.common.form.AzureValidationInfo;
+import com.microsoft.azure.toolkit.lib.common.utils.Debouncer;
+import com.microsoft.azure.toolkit.lib.common.utils.TailingDebouncer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Text;
 
 public class AzureTextInput extends Text implements AzureFormInputControl<String>, ModifyListener {
-    @Getter
-    @Setter
-    private boolean required;
-    @Getter
-    @Setter
-    private Validatable.Validator validator;
+    protected static final int DEBOUNCE_DELAY = 300;
+    private final Debouncer debouncer;
+    private String value;
+
+    public AzureTextInput(Composite parent, int style) {
+        super(parent, style);
+        this.addModifyListener(this);
+        this.debouncer = new TailingDebouncer(() -> fireValueChangedEvent(this.value), DEBOUNCE_DELAY);
+    }
 
     public AzureTextInput(Composite parent) {
-        super(parent, SWT.NONE);
-        this.addModifyListener(this);
+        this(parent, SWT.NONE);
+    }
+
+    protected AzureValidationInfo doValidateValue() {
+        return AzureFormInputControl.super.doValidate();
+    }
+
+    @Override
+    public AzureValidationInfo doValidate() {
+        return this.debouncer.isPending() ? AzureValidationInfo.PENDING : this.doValidateValue();
+    }
+
+    @Override
+    public void modifyText(ModifyEvent modifyEvent) {
+        this.value = this.getText();
+        this.debouncer.debounce();
     }
 
     @Override
@@ -39,12 +55,8 @@ public class AzureTextInput extends Text implements AzureFormInputControl<String
     }
 
     @Override
-    public void modifyText(ModifyEvent modifyEvent) {
-
-    }
-
-    @Override
-    public Control getInputControl() {
-        return this;
+    protected void checkSubclass() {
+        //  allow subclass
+        System.out.println("info   : checking menu subclass");
     }
 }
