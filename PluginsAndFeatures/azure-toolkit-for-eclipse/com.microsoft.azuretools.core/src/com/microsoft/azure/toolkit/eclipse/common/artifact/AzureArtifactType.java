@@ -6,5 +6,5 @@
 package com.microsoft.azure.toolkit.eclipse.common.artifact;
 
 public enum AzureArtifactType {
-    Gradle, Maven, Artifact, File
+    Gradle, Maven, Artifact, File, Eclipse
 }

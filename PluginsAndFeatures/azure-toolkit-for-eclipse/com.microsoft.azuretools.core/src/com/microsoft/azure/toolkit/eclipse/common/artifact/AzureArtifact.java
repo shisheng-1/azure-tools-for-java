@@ -7,9 +7,11 @@ package com.microsoft.azure.toolkit.eclipse.common.artifact;
 
 
 import org.apache.maven.project.MavenProject;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.jdt.ui.JavaUI;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.ISharedImages;
+import org.eclipse.ui.ide.IDE;
 
 import javax.annotation.Nonnull;
 import java.io.File;
@@ -61,9 +63,17 @@ public class AzureArtifact {
                 mavenProject);
     }
 
+    public static AzureArtifact createFromEclipseProject(IProject mavenProject) {
+        return new AzureArtifact(AzureArtifactType.Eclipse,
+                mavenProject.getName(),
+                mavenProject);
+    }
+
     public Image getIcon() {
         ISharedImages images = (ISharedImages) JavaUI.getSharedImages();
         switch (type) {
+            case Eclipse:
+                return images.getImageDescriptor(IDE.SharedImages.IMG_OBJ_PROJECT).createImage();
             case Maven:
                 // TODO(andxu): get maven icon
                 return null;

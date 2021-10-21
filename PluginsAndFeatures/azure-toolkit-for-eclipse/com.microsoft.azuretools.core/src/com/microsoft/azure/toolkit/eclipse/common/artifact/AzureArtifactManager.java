@@ -8,6 +8,8 @@ package com.microsoft.azure.toolkit.eclipse.common.artifact;
 import com.microsoft.azure.toolkit.lib.common.exception.AzureToolkitRuntimeException;
 import com.microsoft.azure.toolkit.lib.common.operation.AzureOperation;
 import com.microsoft.azuretools.core.utils.MavenUtils;
+import com.microsoft.azuretools.core.utils.WAPropertyTester;
+import lombok.Lombok;
 import org.apache.commons.compress.utils.FileNameUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -19,6 +21,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.m2e.core.MavenPlugin;
+import org.eclipse.m2e.core.internal.IMavenConstants;
 import org.eclipse.m2e.core.project.IMavenProjectFacade;
 import org.eclipse.m2e.core.project.IMavenProjectRegistry;
 
@@ -67,6 +70,9 @@ public class AzureArtifactManager {
         final List<MavenProject> mavenProjects = listMavenProjects();
         azureArtifacts.addAll(mavenProjects.stream().map(AzureArtifact::createFromMavenProject).collect(Collectors.toList()));
 
+        List<IProject> webProjects = listWebProjects();
+
+        azureArtifacts.addAll(webProjects.stream().map(AzureArtifact::createFromEclipseProject).collect(Collectors.toList()));
         if (packagingFilter == null) {
             return azureArtifacts;
         }
@@ -96,24 +102,46 @@ public class AzureArtifactManager {
     }
 
     public static List<IProject> listJavaProjects() {
+        return listProjects(project -> {
+            try {
+                return project.hasNature(JavaCore.NATURE_ID);
+            } catch (CoreException e) {
+                throw Lombok.sneakyThrow(e);
+            }
+        });
+    }
+
+    public static List<IProject> listWebProjects() {
+        return listProjects(project -> {
+            try {
+                return !project.hasNature(IMavenConstants.NATURE_ID) && WAPropertyTester.isWebProj(project);
+            } catch (CoreException e) {
+                throw Lombok.sneakyThrow(e);
+            }
+        });
+    }
+
+    public static List<IProject> listProjects(Predicate<IProject> predicate) {
         List<IProject> projectList = new ArrayList<>();
         try {
             IWorkspaceRoot workspaceRoot = ResourcesPlugin.getWorkspace().getRoot();
             IProject[] projects = workspaceRoot.getProjects();
             for (int i = 0; i < projects.length; i++) {
                 IProject project = projects[i];
-                if (project.isOpen() && project.hasNature(JavaCore.NATURE_ID)) {
+                if (project.isOpen() && predicate.test(project)) {
                     projectList.add(project);
                 }
             }
-        } catch (CoreException e) {
-            throw new AzureToolkitRuntimeException("Cannot list java projects.", e);
+        } catch (Throwable e) {
+            throw new AzureToolkitRuntimeException("Cannot list projects.", e);
         }
         return projectList;
     }
 
     public String getPackaging(AzureArtifact artifact) {
         switch (artifact.getType()) {
+            case Eclipse:
+                return StringUtils.lowerCase(WAPropertyTester.getProjectNature((IProject) artifact.getReferencedObject()).toString());
             case Maven:
                 return ((MavenProject) artifact.getReferencedObject()).getPackaging();
             case File:
