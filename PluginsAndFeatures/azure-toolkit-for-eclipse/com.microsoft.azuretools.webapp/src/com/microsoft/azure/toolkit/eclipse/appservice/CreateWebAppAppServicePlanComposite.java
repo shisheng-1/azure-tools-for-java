@@ -10,6 +10,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 
 import java.util.Objects;
+import java.util.Optional;
 
 public class CreateWebAppAppServicePlanComposite extends Composite {
 
@@ -46,11 +47,11 @@ public class CreateWebAppAppServicePlanComposite extends Composite {
         textSku = new Label(this, SWT.NONE);
         textSku.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
 
-        cbServicePlan.addPostSelectionChangedListener(event -> {
-            if (event.getSelection().isEmpty()) {
-                this.textSku.setText(NOT_APPLICABLE);
-                return;
-            }
+        cbServicePlan.addValueChangedListener(event -> {
+//            if (event.getSelection().isEmpty()) {
+//                this.textSku.setText(NOT_APPLICABLE);
+//                return;
+//            }
             final AppServicePlanEntity plan = cbServicePlan.getValue();
             if (plan == null || plan.getPricingTier() == null) {
                 return;
@@ -62,6 +63,11 @@ public class CreateWebAppAppServicePlanComposite extends Composite {
         });
 
     }
+    
+    public AppServicePlanEntity getServicePlan() {
+    	return cbServicePlan.getValue();
+    }
+    
 
     @Override
     protected void checkSubclass() {

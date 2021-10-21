@@ -2,9 +2,16 @@ package com.microsoft.azure.toolkit.eclipse.appservice;
 
 import com.microsoft.azure.toolkit.eclipse.appservice.platform.RuntimeComboBox;
 import com.microsoft.azure.toolkit.eclipse.common.component.RegionComboBox;
+import com.microsoft.azure.toolkit.lib.appservice.config.RuntimeConfig;
+import com.microsoft.azure.toolkit.lib.appservice.model.Runtime;
+import com.microsoft.azure.toolkit.lib.common.form.AzureFormInput;
 import com.microsoft.azure.toolkit.lib.common.model.Region;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
+
+import java.util.Arrays;
+import java.util.List;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.layout.GridLayout;
@@ -61,6 +68,20 @@ public class CreateWebAppInstanceDetailComposite extends Composite {
         cbRegion.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1));
 
     }
+
+	public String getAppName() {
+		return text.getText();
+	}
+	
+	public RuntimeConfig getRuntime() {
+		final Runtime runtime = cbRuntime.getValue();
+        return new RuntimeConfig().os(runtime.getOperatingSystem())
+        		.javaVersion(runtime.getJavaVersion()).webContainer(runtime.getWebContainer());
+	}
+	
+	public Region getResourceRegion() {
+		return cbRegion.getValue();
+	}
 
     @Override
     protected void checkSubclass() {

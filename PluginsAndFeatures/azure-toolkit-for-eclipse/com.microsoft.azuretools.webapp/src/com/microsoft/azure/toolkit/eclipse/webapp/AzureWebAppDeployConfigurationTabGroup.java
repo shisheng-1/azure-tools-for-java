@@ -12,6 +12,6 @@ import org.eclipse.debug.ui.ILaunchConfigurationDialog;
 public class AzureWebAppDeployConfigurationTabGroup extends AbstractLaunchConfigurationTabGroup {
     @Override
     public void createTabs(ILaunchConfigurationDialog dialog, String mode) {
-        setTabs(new AzureWebAppDeployConfigurationTab(), new CommonTab());
+        // setTabs(new CommonTab());
     }
 }
