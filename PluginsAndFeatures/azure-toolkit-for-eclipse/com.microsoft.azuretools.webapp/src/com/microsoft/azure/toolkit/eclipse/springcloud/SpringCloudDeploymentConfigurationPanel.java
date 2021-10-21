@@ -61,7 +61,6 @@ public class SpringCloudDeploymentConfigurationPanel extends Composite implement
         cbArtifact.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
 
         Label lblSubscription = new Label(this, SWT.NONE);
-        lblSubscription.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false, 1, 1));
         lblSubscription.setText("Subscription:");
 
         cbSubscription = new SubscriptionComboBox(this);
