@@ -72,6 +72,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.wst.common.frameworks.datamodel.DataModelFactory;
 import org.eclipse.wst.common.frameworks.datamodel.IDataModel;
 
+import com.microsoft.azure.toolkit.eclipse.common.component.EclipseProjectComboBox;
 import com.microsoft.azure.toolkit.lib.Azure;
 import com.microsoft.azure.toolkit.lib.appservice.AzureAppService;
 import com.microsoft.azure.toolkit.lib.appservice.entity.AppServiceBaseEntity;
@@ -132,6 +133,7 @@ public class WebAppDeployDialog extends AppServiceBaseDialog {
 
     private IProject project;
     private Shell parentShell;
+    private EclipseProjectComboBox projectCombo;
 
     private static final String ftpLinkString = "ShowFtpCredentials";
     private static final String DATE_FORMAT = "yyMMddHHmmss";
@@ -153,6 +155,7 @@ public class WebAppDeployDialog extends AppServiceBaseDialog {
     private WebAppSettingModel webAppSettingModel;
     private boolean isDeployToSlot = false;
     private boolean isCreateNewSlot = false;
+    private Group container_1;
 
     /**
      * Create the dialog.
@@ -163,12 +166,13 @@ public class WebAppDeployDialog extends AppServiceBaseDialog {
         super(parentShell);
         setHelpAvailable(false);
         setShellStyle(SWT.DIALOG_TRIM | SWT.RESIZE | SWT.APPLICATION_MODAL);
-        this.project = project;
         this.parentShell = parentShell;
+        this.project = project;
     }
 
     public static WebAppDeployDialog go(Shell parentShell, IProject project) {
         WebAppDeployDialog d = new WebAppDeployDialog(parentShell, project);
+        // d.projectCombo.setValue(project);
         if (d.open() == Window.OK) {
             return d;
         }
@@ -198,27 +202,67 @@ public class WebAppDeployDialog extends AppServiceBaseDialog {
         scrolledComposite.setLayout(new GridLayout(2, false));
         scrolledComposite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
-        Group container = new Group(scrolledComposite, SWT.NONE);
-        container.setLayout(new GridLayout(2, false));
+        container_1 = new Group(scrolledComposite, SWT.NONE);
+        container_1.setLayout(new GridLayout(2, false));
         GridData gdContainer = new GridData(SWT.FILL, SWT.FILL, false, false, 1, 1);
         gdContainer.widthHint = 750;
         gdContainer.heightHint = 1000;
-        container.setLayoutData(gdContainer);
+        container_1.setLayoutData(gdContainer);
 
-        createAppGroup(container);
-        createButton(container);
-        createAppDetailGroup(container);
-        new Label(container, SWT.NONE);
-        createSlotGroup(container);
+        createAppGroup(container_1);
+        createButton(container_1);
+        createAppDetailGroup(container_1);
+        new Label(container_1, SWT.NONE);
+        ScrolledComposite scrolledComposite_1 = new ScrolledComposite(container_1, SWT.V_SCROLL);
+        scrolledComposite_1.setLayout(new FillLayout(SWT.HORIZONTAL));
+        GridData gd_scrolledComposite_1 = new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1);
+        gd_scrolledComposite_1.heightHint = 140;
+        scrolledComposite_1.setLayoutData(gd_scrolledComposite_1);
+        
+                Group grpSlot = new Group(scrolledComposite_1, SWT.NONE);
+                grpSlot.setLayout(new FillLayout(SWT.HORIZONTAL));
+                grpSlot.setLayoutData(gd_scrolledComposite_1);
+                grpSlot.setText("Deployment Slot");
+                
+                        scrolledComposite_1.setContent(grpSlot);
+                        scrolledComposite_1.setExpandHorizontal(true);
+                        scrolledComposite_1.setExpandVertical(true);
+                        scrolledComposite_1.setMinSize(grpSlot.computeSize(SWT.DEFAULT, SWT.DEFAULT));
+                        new Label(container_1, SWT.NONE);
+                        new Label(container_1, SWT.NONE);
+                        new Label(container_1, SWT.NONE);
+                        new Label(container_1, SWT.NONE);
+                        new Label(container_1, SWT.NONE);
+                        new Label(container_1, SWT.NONE);
+        createSlotGroup(container_1);
 
-        scrolledComposite.setContent(container);
+        scrolledComposite.setContent(container_1);
         scrolledComposite.setExpandHorizontal(true);
         scrolledComposite.setExpandVertical(true);
-        scrolledComposite.setMinSize(container.computeSize(SWT.DEFAULT, SWT.DEFAULT));
+        scrolledComposite.setMinSize(container_1.computeSize(SWT.DEFAULT, SWT.DEFAULT));
         return scrolledComposite;
     }
-
+    
     private void createAppGroup(Composite container) {
+        
+        Composite composite = new Composite(container_1, SWT.NONE);
+        composite.setLayout(new GridLayout(2, false));
+        GridData gd_composite = new GridData(SWT.LEFT, SWT.CENTER, true, false, 1, 1);
+        gd_composite.widthHint = 788;
+        composite.setLayoutData(gd_composite);
+        
+        Label lblNewLabel = new Label(composite, SWT.NONE);
+        lblNewLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
+        lblNewLabel.setText("Project: ");
+        
+        projectCombo = new EclipseProjectComboBox(composite);
+        projectCombo.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false, 1, 1));
+		if (project != null) {
+			projectCombo.setValue(project);
+		}
+        lblNewLabel.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1));
+        
+        new Label(container_1, SWT.NONE);
         table = new Table(container, SWT.BORDER | SWT.FULL_SELECTION);
         GridData gridTable = new GridData(SWT.FILL, SWT.FILL, true, false, 1, 1);
         gridTable.heightHint = 250;
@@ -262,7 +306,7 @@ public class WebAppDeployDialog extends AppServiceBaseDialog {
             public void widgetSelected(SelectionEvent e) {
                 sendTelemetry("CREATE");
                 EventUtil.logEvent(EventType.info, WEBAPP, OPEN_CREATEWEBAPP_DIALOG, buildProperties());
-                createAppService(project);
+                createAppService(getProject());
             }
         });
         btnCreate.setText("Create...");
@@ -329,8 +373,9 @@ public class WebAppDeployDialog extends AppServiceBaseDialog {
             }
         });
 
+        final IProject project = getProject();
         try {
-            if (MavenUtils.isMavenProject(project) && MavenUtils.getPackaging(project).equals("jar")) {
+            if (project != null && MavenUtils.isMavenProject(project) && MavenUtils.getPackaging(project).equals("jar")) {
                 btnDeployToRoot.setSelection(true);
                 btnDeployToRoot.setVisible(false);
                 ((RowData) btnDeployToRoot.getLayoutData()).exclude = true;
@@ -342,17 +387,7 @@ public class WebAppDeployDialog extends AppServiceBaseDialog {
     }
 
     private void createSlotGroup(Composite container) {
-        ScrolledComposite scrolledComposite = new ScrolledComposite(container, SWT.V_SCROLL);
-        scrolledComposite.setLayout(new FillLayout(SWT.HORIZONTAL));
-        GridData gdGrpSlot = new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1);
-        gdGrpSlot.heightHint = 140;
-        scrolledComposite.setLayoutData(gdGrpSlot);
-
-        Group grpSlot = new Group(scrolledComposite, SWT.NONE);
-        grpSlot.setLayout(new FillLayout(SWT.HORIZONTAL));
-        grpSlot.setLayoutData(gdGrpSlot);
-        grpSlot.setText("Deployment Slot");
-        Composite compositeSlot = new Composite(grpSlot, SWT.NONE);
+        Composite compositeSlot = new Composite(container , SWT.NONE);
         compositeSlot.setLayout(new GridLayout(2, false));
 
         RowLayout rowLayout = new RowLayout();
@@ -458,11 +493,6 @@ public class WebAppDeployDialog extends AppServiceBaseDialog {
         });
         AccessibilityUtils.addAccessibilityNameForUIComponent(comboSlotConf, "Deployment slot configuration source");
         decComboSlotConf = decorateContorolAndRegister(comboSlotConf);
-
-        scrolledComposite.setContent(grpSlot);
-        scrolledComposite.setExpandHorizontal(true);
-        scrolledComposite.setExpandVertical(true);
-        scrolledComposite.setMinSize(grpSlot.computeSize(SWT.DEFAULT, SWT.DEFAULT));
 
         fillSlot();
         radioSlotLogic();
@@ -709,7 +739,8 @@ public class WebAppDeployDialog extends AppServiceBaseDialog {
         try {
             String artifactName;
             String destinationPath;
-            if (MavenUtils.isMavenProject(project)) {
+            final IProject project = getProject();
+            if (project != null && MavenUtils.isMavenProject(project)) {
                 artifactName = MavenUtils.getFinalName(project);
                 destinationPath = MavenUtils.getTargetPath(project);
             } else {
@@ -728,9 +759,13 @@ public class WebAppDeployDialog extends AppServiceBaseDialog {
         }
         super.okPressed();
     }
+    
+    private IProject getProject() {
+    	return projectCombo.getValue();
+    }
 
     private void export(String projectName, String destinationPath) throws Exception {
-
+    	final IProject project = getProject();
         System.out.println("Building project '" + projectName + "'...");
         project.build(IncrementalProjectBuilder.FULL_BUILD, null);
 
@@ -765,7 +800,7 @@ public class WebAppDeployDialog extends AppServiceBaseDialog {
         String deploymentName = UUID.randomUUID().toString();
         AzureDeploymentProgressNotification.createAzureDeploymentProgressNotification(deploymentName, jobDescription);
         boolean isDeployToRoot = btnDeployToRoot.getSelection();
-
+        final IProject project = getProject();
         Job job = new Job(jobDescription) {
             @Override
             protected IStatus run(IProgressMonitor monitor) {
@@ -775,7 +810,7 @@ public class WebAppDeployDialog extends AppServiceBaseDialog {
                 String errorMessage = "Error";
                 Map<String, String> postEventProperties = new HashMap<>();
                 try {
-                    boolean isJar = MavenUtils.isMavenProject(project)
+                    boolean isJar = project != null && MavenUtils.isMavenProject(project)
                             && MavenUtils.getPackaging(project).equals("jar");
                     postEventProperties.put(TelemetryConstants.JAVA_APPNAME, project.getName());
                     postEventProperties.put(TelemetryConstants.FILETYPE, isJar ? "jar" : "war");

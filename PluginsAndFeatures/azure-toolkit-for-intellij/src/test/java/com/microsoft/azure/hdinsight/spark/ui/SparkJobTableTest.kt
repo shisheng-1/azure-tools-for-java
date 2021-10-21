@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.microsoft.azure.hdinsight.spark.common.SparkSubmitResponse
-import com.microsoft.azure.hdinsight.spark.common.SparkUITest
 import com.microsoft.azure.hdinsight.spark.ui.livy.batch.LivyBatchJobTableModel
 import com.microsoft.azure.hdinsight.spark.ui.livy.batch.LivyBatchJobTableModel.JobPage
 import com.microsoft.azure.hdinsight.spark.ui.livy.batch.LivyBatchJobTableViewport
@@ -206,26 +205,26 @@ fun getJobListPage(pageLink: String?): JobPage? {
         else -> null
     }
 }
-@Ignore
-class SparkJobTableTest : SparkUITest() {
-
-    @Test
-    fun testLivyTable() {
-        val model = LivyBatchJobViewer.Model(LivyBatchJobTableViewport.Model(
-                    LivyBatchJobTableModel(tableSchema), getJobListPage("http://page1")))
-
-        jobView.setData(model)
-
-        dialog!!.apply {
-            contentPane.add(jobView.component)
-            pack()
-
-            addWindowListener(object: WindowAdapter() {
-                override fun windowClosing(e: WindowEvent?) {
-                    jobView.dispose()
-                }
-            })
-            isVisible = true
-        }
-    }
-}
+//@Ignore
+//class SparkJobTableTest : SparkUITest() {
+//
+//    @Test
+//    fun testLivyTable() {
+//        val model = LivyBatchJobViewer.Model(LivyBatchJobTableViewport.Model(
+//                    LivyBatchJobTableModel(tableSchema), getJobListPage("http://page1")))
+//
+//        jobView.setData(model)
+//
+//        dialog!!.apply {
+//            contentPane.add(jobView.component)
+//            pack()
+//
+//            addWindowListener(object: WindowAdapter() {
+//                override fun windowClosing(e: WindowEvent?) {
+//                    jobView.dispose()
+//                }
+//            })
+//            isVisible = true
+//        }
+//    }
+//}

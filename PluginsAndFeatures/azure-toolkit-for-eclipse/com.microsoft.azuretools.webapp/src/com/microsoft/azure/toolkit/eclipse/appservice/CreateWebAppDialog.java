@@ -4,10 +4,10 @@ import com.microsoft.azure.toolkit.eclipse.common.component.AzureDialog;
 import com.microsoft.azure.toolkit.eclipse.common.component.AzureFormInputControl;
 import com.microsoft.azure.toolkit.eclipse.common.component.SubscriptionAndResourceGroupComposite;
 import com.microsoft.azure.toolkit.eclipse.common.component.SubscriptionComboBox;
+import com.microsoft.azure.toolkit.eclipse.common.form.AzureForm;
 import com.microsoft.azure.toolkit.lib.appservice.config.AppServiceConfig;
 import com.microsoft.azure.toolkit.lib.appservice.entity.AppServicePlanEntity;
 import com.microsoft.azure.toolkit.lib.appservice.model.Runtime;
-import com.microsoft.azure.toolkit.lib.common.form.AzureForm;
 import com.microsoft.azure.toolkit.lib.common.form.AzureFormInput;
 import com.microsoft.azure.toolkit.lib.common.model.Region;
 import com.microsoft.azure.toolkit.lib.common.model.Subscription;
@@ -117,7 +117,7 @@ public class CreateWebAppDialog extends AzureDialog<AppServiceConfig> implements
 	}
 
 	@Override
-	public AppServiceConfig getData() {
+	public AppServiceConfig getFormData() {
 		final AppServicePlanEntity entity = appServicePlanPanel.getServicePlan();
 		return new AppServiceConfig()
 				.subscriptionId(subsAndResourceGroupPanel.getSubscription().getId())
@@ -131,7 +131,7 @@ public class CreateWebAppDialog extends AzureDialog<AppServiceConfig> implements
 	}
 
 	@Override
-	public void setData(AppServiceConfig config) {
+	public void setFormData(AppServiceConfig config) {
 		// TODO Auto-generated method stub
 		
 	}
