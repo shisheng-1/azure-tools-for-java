@@ -5,6 +5,14 @@
 package com.microsoft.azure.toolkit.eclipse.common.component;
 
 import com.microsoft.azure.toolkit.eclipse.common.component.resourcegroup.ResourceGroupComboBox;
+import com.microsoft.azure.toolkit.lib.common.form.AzureFormInput;
+import com.microsoft.azure.toolkit.lib.common.model.ResourceGroup;
+import com.microsoft.azure.toolkit.lib.common.model.Subscription;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -39,6 +47,19 @@ public class SubscriptionAndResourceGroupComposite extends Composite {
         cbSubs.addValueChangedListener(cbResourceGroup::setSubscription);
     }
 
+	public Subscription getSubscription() {
+		return cbSubs.getValue();
+	}
+
+	public ResourceGroup getResourceGroup() {
+		return cbResourceGroup.getValue();
+	}
+    
+	public List<AzureFormInput<?>> getInputs() {
+		// TODO Auto-generated method stub
+		return Arrays.asList(cbSubs, cbResourceGroup);
+	}
+	
     @Override
     protected void checkSubclass() {
         // Disable the check that prevents subclassing of SWT components

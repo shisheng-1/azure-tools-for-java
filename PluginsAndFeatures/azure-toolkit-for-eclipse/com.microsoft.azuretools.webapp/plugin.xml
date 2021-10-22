@@ -9,12 +9,23 @@
             icon="icons/PublishWebApp_16.png">
             <commandParameter id="com.microsoft.ui.dropdown.msg" name="DropDown Options" optional="true"></commandParameter>
        </command>   
+       <command
+            name="Create Web App..."
+            categoryId="com.microsoft.ui.dropdown.category"
+            id="com.microsoft.azuretools.webapp.commands.createWebApp"
+            icon="icons/PublishWebApp_16.png">
+       </command> 
    </extension>
    
    <extension point="org.eclipse.ui.handlers">
       <handler
             commandId="com.microsoft.azuretools.webapp.commands.deployToAzure"
             class="com.microsoft.azuretools.webapp.handlers.DeployToAzureHandler">
+      </handler>
+      
+      <handler
+            commandId="com.microsoft.azuretools.webapp.commands.createWebApp"
+            class="com.microsoft.azure.toolkit.eclipse.webapp.handlers.CreateWebAppHandler">
       </handler>
    </extension>
    
@@ -76,7 +87,7 @@
             implementation="com.microsoft.azure.toolkit.ide.appservice.webapp.WebAppActionsContributor">
       </actionContributor>
       <actionContributor
-            implementation="com.microsoft.azure.toolkit.intellij.webapp.EclipseWebAppActionsContributor">
+            implementation="com.microsoft.azure.toolkit.eclipse.webapp.EclipseWebAppActionsContributor">
       </actionContributor>
    </extension>
 
