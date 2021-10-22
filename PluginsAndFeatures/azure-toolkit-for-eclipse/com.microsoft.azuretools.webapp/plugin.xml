@@ -80,4 +80,27 @@
       </actionContributor>
    </extension>
 
+	<extension point="org.eclipse.debug.core.launchConfigurationTypes">
+		<launchConfigurationType name="Deploy Azure Webapp launch" 
+			delegate="com.microsoft.azure.toolkit.eclipse.webapp.WebAppDeployLaunchConfiguration" 
+			modes="run"
+			id="com.microsoft.azure.toolkit.eclipse.webapp.launchConfigurationType">
+		</launchConfigurationType>
+	</extension>
+	<extension
+    	point="org.eclipse.debug.ui.launchConfigurationTabGroups">
+    	<launchConfigurationTabGroup
+	        class="com.microsoft.azure.toolkit.eclipse.webapp.AzureWebAppDeployConfigurationTabGroup"
+	        id="com.microsoft.azure.toolkit.eclipse.webapp.azureWebAppDeployConfigurationTabGroup"
+	        type="com.microsoft.azure.toolkit.eclipse.webapp.launchConfigurationType">
+	    </launchConfigurationTabGroup>
+	</extension>
+	<extension
+        point="org.eclipse.debug.ui.launchConfigurationTypeImages">
+	    <launchConfigurationTypeImage
+	            id="com.microsoft.azure.toolkit.eclipse.webapp.launchConfigurationTypeImage"
+	            configTypeID="com.microsoft.azure.toolkit.eclipse.webapp.launchConfigurationType"
+	            icon="icons/PublishWebApp_16.png">
+	    </launchConfigurationTypeImage>
+    </extension>
 </plugin>
