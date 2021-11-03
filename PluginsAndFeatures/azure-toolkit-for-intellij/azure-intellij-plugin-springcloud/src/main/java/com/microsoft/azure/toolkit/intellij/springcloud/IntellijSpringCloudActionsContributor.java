@@ -22,6 +22,8 @@ import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 
 public class IntellijSpringCloudActionsContributor implements IActionsContributor {
+    public static final int ORDER = SpringCloudActionsContributor.ORDER + 1;
+
     @Override
     public void registerHandlers(AzureActionManager am) {
         this.registerCreateAppActionHandler(am);
@@ -45,5 +47,10 @@ public class IntellijSpringCloudActionsContributor implements IActionsContributo
         final BiPredicate<SpringCloudApp, AnActionEvent> condition = (r, e) -> true;
         final BiConsumer<SpringCloudApp, AnActionEvent> handler = (c, e) -> SpringCloudStreamingLogAction.startLogStreaming(c, e.getProject());
         am.registerHandler(SpringCloudActionsContributor.STREAM_LOG, condition, handler);
+    }
+
+    @Override
+    public int getOrder() {
+        return ORDER;
     }
 }

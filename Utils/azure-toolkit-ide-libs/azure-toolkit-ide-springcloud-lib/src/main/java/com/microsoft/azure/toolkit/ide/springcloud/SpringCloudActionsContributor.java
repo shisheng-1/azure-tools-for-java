@@ -20,7 +20,7 @@ import java.util.function.Consumer;
 import static com.microsoft.azure.toolkit.lib.common.operation.AzureOperationBundle.title;
 
 public class SpringCloudActionsContributor implements IActionsContributor {
-
+    public static final int ORDER = ResourceCommonActionsContributor.ORDER + 1;
     public static final String APP_ACTIONS = "actions.springcloud.app";
     public static final String CLUSTER_ACTIONS = "actions.springcloud.cluster";
     public static final String SERVICE_ACTIONS = "actions.springcloud.service";
@@ -81,5 +81,10 @@ public class SpringCloudActionsContributor implements IActionsContributor {
                 SpringCloudActionsContributor.STREAM_LOG
         );
         am.registerGroup(APP_ACTIONS, appActionGroup);
+    }
+
+    @Override
+    public int getOrder() {
+        return ORDER;
     }
 }

@@ -19,6 +19,7 @@ import java.util.function.Consumer;
 import static com.microsoft.azure.toolkit.lib.common.operation.AzureOperationBundle.title;
 
 public class AppServiceFileActionsContributor implements IActionsContributor {
+    public static final int ORDER = IActionsContributor.DEFAULT_ORDER;
     public static final String APP_SERVICE_FILE_ACTIONS = "actions.appservice.file";
     public static final String APP_SERVICE_DIRECTORY_ACTIONS = "actions.appservice.directory";
 
@@ -50,6 +51,6 @@ public class AppServiceFileActionsContributor implements IActionsContributor {
     }
 
     public int getOrder() {
-        return 1; //after azure resource common actions registered
+        return ORDER;
     }
 }

@@ -8,6 +8,7 @@ package com.microsoft.azure.toolkit.intellij.vm;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.microsoft.azure.toolkit.ide.common.IActionsContributor;
 import com.microsoft.azure.toolkit.ide.common.action.ResourceCommonActionsContributor;
+import com.microsoft.azure.toolkit.ide.vm.VirtualMachineActionsContributor;
 import com.microsoft.azure.toolkit.intellij.vm.creation.CreateVirtualMachineAction;
 import com.microsoft.azure.toolkit.lib.common.action.AzureActionManager;
 import com.microsoft.azure.toolkit.lib.common.entity.IAzureBaseResource;
@@ -19,6 +20,8 @@ import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 
 public class IntelliJVMActionsContributor implements IActionsContributor {
+    public static final int ORDER = VirtualMachineActionsContributor.ORDER + 1;
+
     @Override
     public void registerHandlers(AzureActionManager am) {
         final BiPredicate<Object, AnActionEvent> createCondition = (r, e) -> r instanceof AzureVirtualMachine;
@@ -43,6 +46,6 @@ public class IntelliJVMActionsContributor implements IActionsContributor {
 
     @Override
     public int getOrder() {
-        return IActionsContributor.super.getOrder() + 1;
+        return ORDER;
     }
 }

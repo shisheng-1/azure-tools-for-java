@@ -30,6 +30,8 @@ import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 
 public class IntellijRedisActionsContributor implements IActionsContributor {
+    public static final int ORDER = RedisActionsContributor.ORDER + 1;
+
     @Override
     public void registerHandlers(AzureActionManager am) {
         final BiPredicate<Object, AnActionEvent> condition = (r, e) -> r instanceof AzureRedis;
@@ -48,5 +50,10 @@ public class IntellijRedisActionsContributor implements IActionsContributor {
         final AzureResourceEditorViewManager manager = new AzureResourceEditorViewManager((resource) -> type);
         am.<IAzureBaseResource<?, ?>, AnActionEvent>registerHandler(RedisActionsContributor.OPEN_EXPLORER, (r, e) -> r instanceof RedisCache,
             (r, e) -> manager.showEditor(r, Objects.requireNonNull(e.getProject())));
+    }
+
+    @Override
+    public int getOrder() {
+        return ORDER;
     }
 }

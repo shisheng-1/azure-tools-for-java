@@ -14,9 +14,16 @@ import com.microsoft.intellij.actions.AzureSignInAction;
 import java.util.Optional;
 
 public class LegacyIntellijActionsContributor implements IActionsContributor {
+    public static final int ORDER = IActionsContributor.DEFAULT_ORDER;
+
     @Override
     public void registerActions(AzureActionManager am) {
         am.registerAction(Action.REQUIRE_AUTH, new Action<>((Runnable r, AnActionEvent e) ->
                 AzureSignInAction.requireSignedIn(Optional.ofNullable(e).map(AnActionEvent::getProject).orElse(null), r)).authRequired(false));
+    }
+
+    @Override
+    public int getOrder() {
+        return ORDER;
     }
 }

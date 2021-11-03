@@ -22,7 +22,7 @@ import java.util.function.Consumer;
 import static com.microsoft.azure.toolkit.lib.common.operation.AzureOperationBundle.title;
 
 public class ResourceCommonActionsContributor implements IActionsContributor {
-
+    public static final int ORDER = IActionsContributor.DEFAULT_ORDER;
     public static final Action.Id<IAzureBaseResource<?, ?>> START = Action.Id.of("action.resource.start");
     public static final Action.Id<IAzureBaseResource<?, ?>> STOP = Action.Id.of("action.resource.stop");
     public static final Action.Id<IAzureBaseResource<?, ?>> RESTART = Action.Id.of("action.resource.restart");
@@ -115,6 +115,6 @@ public class ResourceCommonActionsContributor implements IActionsContributor {
     }
 
     public int getOrder() {
-        return 1; //after azure resource common actions registered
+        return ORDER;
     }
 }

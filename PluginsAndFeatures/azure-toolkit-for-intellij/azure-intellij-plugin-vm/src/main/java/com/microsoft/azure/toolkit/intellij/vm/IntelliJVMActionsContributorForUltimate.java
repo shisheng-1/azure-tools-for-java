@@ -16,6 +16,8 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 
 public class IntelliJVMActionsContributorForUltimate implements IActionsContributor {
+    public static final int ORDER = VirtualMachineActionsContributor.ORDER + 1;
+
     @Override
     public void registerHandlers(AzureActionManager am) {
         final BiConsumer<VirtualMachine, AnActionEvent> addSshConfigHandler = (c, e) -> AddSshConfigAction
@@ -25,6 +27,6 @@ public class IntelliJVMActionsContributorForUltimate implements IActionsContribu
 
     @Override
     public int getOrder() {
-        return IActionsContributor.super.getOrder() + 2;
+        return ORDER;
     }
 }

@@ -8,6 +8,8 @@ package com.microsoft.azure.toolkit.ide.common;
 import com.microsoft.azure.toolkit.lib.common.action.AzureActionManager;
 
 public interface IActionsContributor {
+    int DEFAULT_ORDER = 0;
+
     default void registerActions(AzureActionManager am) {
     }
 
@@ -17,7 +19,5 @@ public interface IActionsContributor {
     default void registerHandlers(AzureActionManager am) {
     }
 
-    default int getOrder() {
-        return 0;
-    }
+    int getOrder();
 }

@@ -24,6 +24,8 @@ import java.util.function.Consumer;
 import static com.microsoft.azure.toolkit.intellij.connector.ConnectionTopics.CONNECTION_CHANGED;
 
 public class ResourceConnectionActionsContributor implements IActionsContributor {
+    public static final int ORDER = IActionsContributor.DEFAULT_ORDER;
+
     public static final Action.Id<Object> REFRESH_CONNECTIONS = Action.Id.of("action.connector.connections.refresh");
     public static final Action.Id<Module> ADD_CONNECTION = Action.Id.of("action.connector.connection.add");
     public static final Action.Id<Connection<?, ?>> EDIT_CONNECTION = Action.Id.of("action.connector.connection.edit");
@@ -99,5 +101,10 @@ public class ResourceConnectionActionsContributor implements IActionsContributor
             dialog.setData(c);
             dialog.show();
         });
+    }
+
+    @Override
+    public int getOrder() {
+        return ORDER;
     }
 }

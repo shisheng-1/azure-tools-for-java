@@ -16,6 +16,8 @@ import com.microsoft.azure.toolkit.lib.common.entity.IAzureBaseResource;
 import java.util.Objects;
 
 public class IntellijActionsContributor implements IActionsContributor {
+    public static final int ORDER = ResourceCommonActionsContributor.ORDER + 1;
+
     @Override
     public void registerHandlers(AzureActionManager am) {
         am.<String>registerHandler(ResourceCommonActionsContributor.OPEN_URL, Objects::nonNull, BrowserUtil::browse);
@@ -26,6 +28,6 @@ public class IntellijActionsContributor implements IActionsContributor {
 
     @Override
     public int getOrder() {
-        return 2; //after azure resource common actions registered
+        return ORDER;
     }
 }

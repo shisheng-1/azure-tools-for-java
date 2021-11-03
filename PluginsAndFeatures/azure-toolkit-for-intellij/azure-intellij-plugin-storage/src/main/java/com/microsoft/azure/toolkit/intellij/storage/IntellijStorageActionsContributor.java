@@ -8,6 +8,7 @@ package com.microsoft.azure.toolkit.intellij.storage;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.microsoft.azure.toolkit.ide.common.IActionsContributor;
 import com.microsoft.azure.toolkit.ide.common.action.ResourceCommonActionsContributor;
+import com.microsoft.azure.toolkit.ide.storage.StorageActionsContributor;
 import com.microsoft.azure.toolkit.intellij.connector.AzureServiceResource;
 import com.microsoft.azure.toolkit.intellij.connector.ConnectorDialog;
 import com.microsoft.azure.toolkit.intellij.storage.connection.StorageAccountResourceDefinition;
@@ -22,6 +23,8 @@ import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 
 public class IntellijStorageActionsContributor implements IActionsContributor {
+    public static final int ORDER = StorageActionsContributor.ORDER + 1;
+
     @Override
     public void registerHandlers(AzureActionManager am) {
         final BiPredicate<Object, AnActionEvent> condition = (r, e) -> r instanceof AzureStorageAccount;
@@ -34,5 +37,10 @@ public class IntellijStorageActionsContributor implements IActionsContributor {
                     dialog.setResource(new AzureServiceResource<>(((StorageAccount) r), StorageAccountResourceDefinition.INSTANCE));
                     dialog.show();
                 }));
+    }
+
+    @Override
+    public int getOrder() {
+        return ORDER;
     }
 }

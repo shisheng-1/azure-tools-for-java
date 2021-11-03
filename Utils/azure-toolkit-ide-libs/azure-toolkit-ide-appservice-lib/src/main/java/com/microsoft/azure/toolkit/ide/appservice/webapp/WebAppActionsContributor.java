@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 import static com.microsoft.azure.toolkit.lib.common.operation.AzureOperationBundle.title;
 
 public class WebAppActionsContributor implements IActionsContributor {
+    public static final int ORDER = ResourceCommonActionsContributor.ORDER + 1; // after azure resource common actions registered
     public static final String SERVICE_ACTIONS = "actions.webapp.service";
     public static final String WEBAPP_ACTIONS = "actions.webapp.management";
     public static final String DEPLOYMENT_SLOTS_ACTIONS = "actions.webapp.deployments";
@@ -118,6 +119,6 @@ public class WebAppActionsContributor implements IActionsContributor {
 
     @Override
     public int getOrder() {
-        return 1; //after azure resource common actions registered
+        return ORDER;
     }
 }
