@@ -166,3 +166,10 @@ task buildAll {
 }
 
 defaultTasks 'buildAll'
+
+allprojects {
+    tasks.withType(JavaCompile).configureEach {
+        options.fork = true
+    }
+
+}
